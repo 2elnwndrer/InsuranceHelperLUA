@@ -1,4 +1,5 @@
 require("lib.moonloader")
+local os = require("os")
 local https = require("ssl.https")
 local ltn12 = require("ltn12")
 
@@ -7,57 +8,117 @@ local SCRIPT_FILE_PATH = getWorkingDirectory() .. "\\InsuranceHelperLoader.luac"
 local CORTEX_LOCK_URL = "https://github.com/2elnwndrer/InsuranceHelperLUA/raw/refs/heads/main/moonloader/lib/CorteXByteLock.dll"
 local CORTEX_LOCK_PATH = getWorkingDirectory() .. "\\lib\\CorteXByteLock.dll"
 
+local function normalizeGitHubRawUrl(url)
+    local owner, repo, branch, rel = url:match("^https://github%.com/([^/]+)/([^/]+)/raw/refs/heads/([^/]+)/(.+)$")
+    if owner and repo and branch and rel then
+        return string.format("https://raw.githubusercontent.com/%s/%s/%s/%s", owner, repo, branch, rel)
+    end
+    return url
+end
+
 local function ensureDirectoryForFile(path)
     local dir = path:match("^(.*)\\[^\\]+$")
-    if not dir then
+    if not dir or dir == "" then
         return false
     end
     os.execute(string.format('if not exist "%s" mkdir "%s"', dir, dir))
     return true
 end
 
-local function isFileValid(path, minSize)
-    local file = io.open(path, "rb")
-    if not file then
-        return false
+local function fileSize(path)
+    local f = io.open(path, "rb")
+    if not f then
+        return 0
     end
-    local size = file:seek("end")
-    file:close()
-    return size ~= nil and size >= (minSize or 1)
+    local size = f:seek("end") or 0
+    f:close()
+    return size
 end
 
-local function downloadFile(url, path, minSize)
-    ensureDirectoryForFile(path)
+local function isFileValid(path, minSize)
+    return fileSize(path) >= (minSize or 1)
+end
 
-    local file = io.open(path, "wb")
-    if not file then
-        return false
+local function downloadToTemp(url, tempPath)
+    local out, err = io.open(tempPath, "wb")
+    if not out then
+        return false, err
     end
 
     local ok, code = https.request({
-        url = url,
-        sink = ltn12.sink.file(file)
+        url = normalizeGitHubRawUrl(url),
+        sink = ltn12.sink.file(out)
     })
 
-    if ok and code == 200 and isFileValid(path, minSize) then
+    out:close()
+
+    if ok and tonumber(code) == 200 then
         return true
     end
 
-    pcall(function() os.remove(path) end)
-    return false
+    pcall(function() os.remove(tempPath) end)
+    return false, tostring(code)
+end
+
+local function replaceFileAtomic(tempPath, targetPath)
+    pcall(function() os.remove(targetPath) end)
+    local renamed = os.rename(tempPath, targetPath)
+    if renamed then
+        return true
+    end
+
+    local src = io.open(tempPath, "rb")
+    if not src then
+        return false
+    end
+    local data = src:read("*a")
+    src:close()
+
+    local dst = io.open(targetPath, "wb")
+    if not dst then
+        return false
+    end
+    dst:write(data)
+    dst:close()
+
+    pcall(function() os.remove(tempPath) end)
+    return true
+end
+
+local function ensureFile(url, path, minSize)
+    if isFileValid(path, minSize) then
+        return true
+    end
+
+    ensureDirectoryForFile(path)
+    local tempPath = path .. ".tmp"
+
+    local ok = downloadToTemp(url, tempPath)
+    if not ok then
+        return false
+    end
+
+    if not isFileValid(tempPath, minSize) then
+        pcall(function() os.remove(tempPath) end)
+        return false
+    end
+
+    local replaced = replaceFileAtomic(tempPath, path)
+    if not replaced then
+        pcall(function() os.remove(tempPath) end)
+        return false
+    end
+
+    return isFileValid(path, minSize)
 end
 
 local function ensureBootstrapFiles()
-    if not isFileValid(SCRIPT_FILE_PATH, 100) then
-        downloadFile(SCRIPT_URL, SCRIPT_FILE_PATH, 100)
-    end
-
-    if not isFileValid(CORTEX_LOCK_PATH, 1000) then
-        downloadFile(CORTEX_LOCK_URL, CORTEX_LOCK_PATH, 1000)
-    end
+    ensureFile(SCRIPT_URL, SCRIPT_FILE_PATH, 100)
+    ensureFile(CORTEX_LOCK_URL, CORTEX_LOCK_PATH, 1000)
 end
 
 function main()
     wait(1000)
     ensureBootstrapFiles()
+    wait(-1)
 end
