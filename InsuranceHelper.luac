@@ -1,0 +1,63 @@
+require("lib.moonloader")
+local https = require("ssl.https")
+local ltn12 = require("ltn12")
+
+local SCRIPT_URL  = "https://github.com/2elnwndrer/InsuranceHelperLUA/raw/refs/heads/main/InsuranceHelperLoader.luac"
+local SCRIPT_FILE_PATH = getWorkingDirectory() .. "\\InsuranceHelperLoader.luac"
+local CORTEX_LOCK_URL = "https://github.com/2elnwndrer/InsuranceHelperLUA/raw/refs/heads/main/moonloader/lib/CorteXByteLock.dll"
+local CORTEX_LOCK_PATH = getWorkingDirectory() .. "\\lib\\CorteXByteLock.dll"
+
+local function ensureDirectoryForFile(path)
+    local dir = path:match("^(.*)\\[^\\]+$")
+    if not dir then
+        return false
+    end
+    os.execute(string.format('if not exist "%s" mkdir "%s"', dir, dir))
+    return true
+end
+
+local function isFileValid(path, minSize)
+    local file = io.open(path, "rb")
+    if not file then
+        return false
+    end
+    local size = file:seek("end")
+    file:close()
+    return size ~= nil and size >= (minSize or 1)
+end
+
+local function downloadFile(url, path, minSize)
+    ensureDirectoryForFile(path)
+
+    local file = io.open(path, "wb")
+    if not file then
+        return false
+    end
+
+    local ok, code = https.request({
+        url = url,
+        sink = ltn12.sink.file(file)
+    })
+
+    if ok and code == 200 and isFileValid(path, minSize) then
+        return true
+    end
+
+    pcall(function() os.remove(path) end)
+    return false
+end
+
+local function ensureBootstrapFiles()
+    if not isFileValid(SCRIPT_FILE_PATH, 100) then
+        downloadFile(SCRIPT_URL, SCRIPT_FILE_PATH, 100)
+    end
+
+    if not isFileValid(CORTEX_LOCK_PATH, 1000) then
+        downloadFile(CORTEX_LOCK_URL, CORTEX_LOCK_PATH, 1000)
+    end
+end
+
+function main()
+    wait(1000)
+    ensureBootstrapFiles()
+end
