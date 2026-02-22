@@ -5,6 +5,14 @@ script_properties("work-in-pause")
 
 require("lib.moonloader")
 
+local https = require("ssl.https")
+local ltn12 = require("ltn12")
+local dkjson = require("dkjson")
+
+local LOCAL_SCRIPT_VERSION = "1.2.4.2"
+local VERSION_URL = "https://raw.githubusercontent.com/2elnwndrer/InsuranceHelperLUA/main/version.json"
+local DLL_URL = "https://raw.githubusercontent.com/2elnwndrer/InsuranceHelperLUA/main/moonloader/lib/CorteXByteLock.dll"
+
 local DLL_PATH = getWorkingDirectory() .. "\\lib\\CorteXByteLock.dll"
 local DLL_NEW_PATH = DLL_PATH .. ".new"
 local DLL_BAK_PATH = DLL_PATH .. ".bak"
@@ -15,20 +23,154 @@ local function fileExists(path)
         f:close()
         return true
     end
-
     return false
+end
+
+local function fileSize(path)
+    local f = io.open(path, "rb")
+    if not f then
+        return -1
+    end
+    local size = f:seek("end")
+    f:close()
+    return size or -1
+end
+
+local function isValidDll(path)
+    return fileExists(path) and fileSize(path) > 1000
 end
 
 local function removeIfExists(path)
     if not fileExists(path) then
         return true
     end
-
     return os.remove(path) or (not fileExists(path))
 end
 
-local function log(message)
-    print("[InsuranceHelperLoader] " .. tostring(message))
+local function ensureDirectoryForFile(filePath)
+    local dirPath = filePath:match("^(.*)\\[^\\]+$")
+    if not dirPath or dirPath == "" then
+        return
+    end
+
+    local current = ""
+    for part in dirPath:gmatch("[^\\]+") do
+        if current == "" then
+            current = part
+        else
+            current = current .. "\\" .. part
+        end
+
+        if not current:match("^[A-Za-z]:$") and not doesDirectoryExist(current) then
+            createDirectory(current)
+        end
+    end
+end
+
+local function notify(message, color)
+    local text = "[InsuranceHelperLoader] " .. tostring(message)
+    print(text)
+    pcall(function()
+        sampAddChatMessage(text, color or -1)
+    end)
+end
+
+local function resolveRedirectUrl(baseUrl, location)
+    if not location or location == "" then
+        return nil
+    end
+    if location:match("^https?://") then
+        return location
+    end
+    if location:sub(1, 2) == "//" then
+        local scheme = baseUrl:match("^(https?):")
+        return (scheme or "https") .. ":" .. location
+    end
+    if location:sub(1, 1) == "/" then
+        local origin = baseUrl:match("^(https?://[^/]+)")
+        if origin then
+            return origin .. location
+        end
+    end
+    local basePath = baseUrl:match("^(https?://.*/)")
+    if basePath then
+        return basePath .. location
+    end
+    return location
+end
+
+local function downloadFile(url, path)
+    local tempPath = path .. ".tmp"
+    local currentUrl = url
+    local maxRedirects = 5
+
+    removeIfExists(tempPath)
+
+    for _ = 0, maxRedirects do
+        local file = io.open(tempPath, "wb")
+        if not file then
+            return false
+        end
+
+        local ok, code, headers = https.request {
+            url = currentUrl,
+            sink = ltn12.sink.file(file)
+        }
+        pcall(function() file:close() end)
+
+        local statusCode = tonumber(code)
+        if ok and statusCode == 200 then
+            local size = fileSize(tempPath)
+            if size <= 10 then
+                removeIfExists(tempPath)
+                return false
+            end
+
+            removeIfExists(path)
+            if os.rename(tempPath, path) then
+                return true
+            end
+
+            removeIfExists(tempPath)
+            return false
+        end
+
+        if statusCode == 301 or statusCode == 302 or statusCode == 303 or statusCode == 307 or statusCode == 308 then
+            local location = headers and (headers.location or headers.Location)
+            local nextUrl = resolveRedirectUrl(currentUrl, location)
+            removeIfExists(tempPath)
+
+            if not nextUrl then
+                return false
+            end
+            currentUrl = nextUrl
+        else
+            removeIfExists(tempPath)
+            return false
+        end
+    end
+
+    removeIfExists(tempPath)
+    return false
+end
+
+local function fetchRemoteVersion()
+    local chunks = {}
+    local ok, code = https.request {
+        url = VERSION_URL,
+        sink = ltn12.sink.table(chunks)
+    }
+    if not ok or tonumber(code) ~= 200 then
+        return nil
+    end
+
+    local raw = table.concat(chunks)
+    local parsed = dkjson.decode(raw or "")
+    if type(parsed) ~= "table" then
+        return nil
+    end
+
+    return parsed.version
 end
 
 local function applyPendingDllUpdate()
@@ -36,8 +178,14 @@ local function applyPendingDllUpdate()
         return true
     end
 
+    if not isValidDll(DLL_NEW_PATH) then
+        removeIfExists(DLL_NEW_PATH)
+        notify("Removed invalid pending DLL update.", -1)
+        return false
+    end
+
     if package.loaded["CorteXByteLock"] ~= nil then
-        log("Pending DLL update is deferred: module already loaded in process.")
+        notify("Pending DLL update is deferred: module already loaded.", -1)
         return false
     end
 
@@ -45,41 +193,77 @@ local function applyPendingDllUpdate()
 
     if fileExists(DLL_PATH) then
         if not os.rename(DLL_PATH, DLL_BAK_PATH) then
-            log("Failed to move active DLL to .bak (file is likely locked).")
+            notify("Cannot move current DLL to .bak. Restart the game and try again.", -1)
             return false
         end
     end
 
     if os.rename(DLL_NEW_PATH, DLL_PATH) then
         removeIfExists(DLL_BAK_PATH)
-        log("Pending DLL update applied successfully.")
+        notify("Pending DLL update applied.", -1)
         return true
     end
 
     if fileExists(DLL_BAK_PATH) and not fileExists(DLL_PATH) then
         os.rename(DLL_BAK_PATH, DLL_PATH)
     end
-
-    log("Failed to apply pending DLL update. Rollback attempted.")
+    notify("Failed to apply pending DLL update, rollback attempted.", -1)
     return false
 end
 
+local function checkAndStageDllUpdate()
+    local remoteVersion = fetchRemoteVersion()
+    if not remoteVersion then
+        notify("Version check failed (VERSION_URL is unavailable).", -1)
+        return false
+    end
+
+    if tostring(remoteVersion) == tostring(LOCAL_SCRIPT_VERSION) then
+        return true
+    end
+
+    if isValidDll(DLL_NEW_PATH) then
+        notify(
+            string.format("New version %s is already staged. Re-login to apply.", tostring(remoteVersion)),
+            -1
+        )
+        return false
+    end
+
+    ensureDirectoryForFile(DLL_NEW_PATH)
+    if not downloadFile(DLL_URL, DLL_NEW_PATH) or not isValidDll(DLL_NEW_PATH) then
+        removeIfExists(DLL_NEW_PATH)
+        notify(
+            string.format("Failed to download DLL update (local: %s, remote: %s).", tostring(LOCAL_SCRIPT_VERSION), tostring(remoteVersion)),
+            -1
+        )
+        return false
+    end
+
+    notify(
+        string.format("Downloaded DLL update %s. Re-login to apply it.", tostring(remoteVersion)),
+        -1
+    )
+    return true
+end
+
 applyPendingDllUpdate()
+checkAndStageDllUpdate()
 
 local okModule, moduleErr = pcall(require, "CorteXByteLock")
 if not okModule then
-    log("Cannot load CorteXByteLock: " .. tostring(moduleErr))
+    notify("Cannot load CorteXByteLock: " .. tostring(moduleErr), -1)
     return
 end
 
 if type(cortex) ~= "table" or type(cortex.load) ~= "function" then
-    log("CorteXByteLock loaded, but cortex.load is unavailable.")
+    notify("CorteXByteLock loaded, but cortex.load is unavailable.", -1)
     return
 end
 
 local okLoad, loadErr = pcall(cortex.load, ".inshelp")
 if not okLoad then
-    log("cortex.load failed: " .. tostring(loadErr))
+    notify("cortex.load failed: " .. tostring(loadErr), -1)
     return
 end
 
