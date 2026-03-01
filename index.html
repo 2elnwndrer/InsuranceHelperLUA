@@ -1,0 +1,429 @@
+﻿<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Мониторинг подписок</title>
+  <style>
+    :root{--bg:#0b2330;--bg2:#123c52;--panel:rgba(6,28,40,.78);--br:rgba(160,215,245,.25);--txt:#e8f7ff;--mut:#99b8c9;--ok:#41d17f;--bad:#ff7777;--warn:#ffc66c}
+    *{box-sizing:border-box} body{margin:0;font-family:Segoe UI,Arial,sans-serif;color:var(--txt);background:radial-gradient(1100px 600px at 100% -10%,#1c556a88,transparent 60%),linear-gradient(150deg,var(--bg),var(--bg2));min-height:100vh}
+    .page{max-width:1200px;margin:0 auto;padding:18px}
+    h1{margin:0 0 6px;font-size:26px}.muted{color:var(--mut)}
+    .panel{border:1px solid var(--br);background:var(--panel);border-radius:12px;padding:10px;margin:0 0 10px}
+    .grid{display:grid;gap:8px}.g-main{grid-template-columns:1fr 220px auto}.g-gh{grid-template-columns:1fr auto auto}.g-local{grid-template-columns:1fr 90px 110px 160px 1fr auto}
+    input,select,button{min-height:38px;border-radius:9px;border:1px solid #88b5ce4f;background:#0d364bcf;color:var(--txt);padding:8px 10px;font:inherit}
+    button{cursor:pointer;font-weight:600;background:linear-gradient(120deg,#48dacc,#48a6da);color:#063548;border:0}
+    button:disabled{opacity:.65;cursor:wait}.btn-danger{background:linear-gradient(120deg,#ff8b8b,#ffb06c);color:#4f1111}.btn-ghost{min-height:30px;padding:5px 8px;background:#184259;border:1px solid #89b9d46a;color:#d9f0ff}
+    .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.card{border:1px solid var(--br);border-radius:10px;padding:10px;background:#0b2f4290}.cap{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.07em}.big{font-size:24px;font-weight:700;margin-top:5px}
+    .notice{display:none;padding:10px;border-radius:10px;margin-bottom:10px}.notice.show{display:block}.notice.info{border:1px solid #7fc8f057;background:#164c695f}.notice.success{border:1px solid #50d28c57;background:#1350325f}.notice.error{border:1px solid #ff8c8c66;background:#60202066}
+    .table{overflow:auto}.table table{width:100%;min-width:1180px;border-collapse:collapse}.table th,.table td{padding:10px 8px;border-bottom:1px solid #92b6c433;text-align:left;vertical-align:middle}
+    .table th{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}.mono{font-family:Consolas,monospace}.note{max-width:240px;word-break:break-word}
+    .status,.source{display:inline-flex;border-radius:999px;padding:3px 9px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;border:1px solid transparent}
+    .active{color:var(--ok);background:#43d27f22;border-color:#43d27f66}.expired{color:var(--bad);background:#ff6e6e22;border-color:#ff6e6e66}.lifetime{color:var(--warn);background:#ffc66c22;border-color:#ffc66c66}.unknown{color:#d4e4ee;background:#d4e4ee22;border-color:#d4e4ee55}
+    .remote{color:#aee7ff;background:#42aed922;border-color:#42aed955}.local{color:#ffe4ad;background:#ffc66c22;border-color:#ffc66c66}
+    @media (max-width:1080px){.g-main,.g-gh,.g-local{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Отслеживание подписки пользователей</h1>
+    <div class="muted" id="updatedAt">Последнее обновление: —</div>
+
+    <section class="panel grid g-main">
+      <input id="searchInput" type="search" placeholder="Поиск по ключу...">
+      <select id="statusFilter">
+        <option value="all">Все статусы</option>
+        <option value="active">Активные</option>
+        <option value="expired">Истекшие</option>
+        <option value="lifetime">Бессрочные</option>
+        <option value="unknown">Неизвестный формат</option>
+      </select>
+      <button id="refreshBtn" type="button">Обновить</button>
+    </section>
+
+    <section class="panel grid g-gh">
+      <input id="tokenInput" type="password" placeholder="GitHub token с правом Contents: write">
+      <label class="muted"><input id="rememberToken" type="checkbox"> Запомнить токен</label>
+      <button id="deleteExpiredBtn" class="btn-danger" type="button">Удалить все истекшие</button>
+    </section>
+    <div class="muted" id="tokenHint" style="margin:0 0 10px">Для записи в GitHub нужен token. Обычный логин в браузере не подходит.</div>
+
+    <section class="panel grid g-local">
+      <input id="localKeyInput" type="text" placeholder="Ключ">
+      <input id="localAmountInput" type="number" min="1" step="1" placeholder="Срок">
+      <select id="localUnitInput"><option value="d">Дни</option><option value="h">Часы</option><option value="w">Недели</option><option value="m">Месяцы</option></select>
+      <input id="localStartDateInput" type="date">
+      <input id="localNoteInput" type="text" placeholder="Заметка (кто это)">
+      <button id="addLocalBtn" type="button">Добавить в GitHub</button>
+    </section>
+    <div class="muted" style="margin:0 0 10px">Запись добавляется в GitHub, а заметка хранится только локально в этом браузере.</div>
+
+    <section class="stats" style="margin:0 0 10px">
+      <article class="card"><div class="cap">Всего</div><div class="big" id="totalCount">0</div></article>
+      <article class="card"><div class="cap">Активные</div><div class="big" id="activeCount">0</div></article>
+      <article class="card"><div class="cap">Истекшие</div><div class="big" id="expiredCount">0</div></article>
+      <article class="card"><div class="cap">Бессрочные</div><div class="big" id="lifetimeCount">0</div></article>
+      <article class="card"><div class="cap">С заметкой</div><div class="big" id="localCount">0</div></article>
+    </section>
+
+    <div id="noticeBox" class="notice"></div>
+
+    <section class="panel table">
+      <table>
+        <thead>
+          <tr><th>Ключ</th><th>Тариф</th><th>Старт</th><th>Окончание</th><th>Осталось</th><th>Статус</th><th>Заметка</th><th>Источник</th><th>Сырой лог</th><th>Действия</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </section>
+
+    <script>
+      const LOGS_URL = "https://raw.githubusercontent.com/2elnwndrer/InsuranceHelperLUA/refs/heads/main/allowedkeys.json";
+      const REFRESH_MS = 120000;
+      const TOKEN_STORAGE_KEY = "inshelper_github_token";
+      const LOCAL_NOTES_STORAGE_KEY = "inshelper_local_notes_v1";
+      const GITHUB = { owner: "2elnwndrer", repo: "InsuranceHelperLUA", path: "allowedkeys.json", branch: "main" };
+
+      const state = { rows: [], remoteRows: [], notesMap: {}, query: "", status: "all", fetchedAt: null, loading: false, saving: false, noticeText: "", noticeType: "info" };
+
+      const refs = {
+        rows: document.getElementById("rows"), search: document.getElementById("searchInput"), filter: document.getElementById("statusFilter"), refresh: document.getElementById("refreshBtn"),
+        updatedAt: document.getElementById("updatedAt"), notice: document.getElementById("noticeBox"), totalCount: document.getElementById("totalCount"), activeCount: document.getElementById("activeCount"),
+        expiredCount: document.getElementById("expiredCount"), lifetimeCount: document.getElementById("lifetimeCount"), localCount: document.getElementById("localCount"),
+        tokenInput: document.getElementById("tokenInput"), rememberToken: document.getElementById("rememberToken"), deleteExpiredBtn: document.getElementById("deleteExpiredBtn"), tokenHint: document.getElementById("tokenHint"),
+        localKeyInput: document.getElementById("localKeyInput"), localAmountInput: document.getElementById("localAmountInput"), localUnitInput: document.getElementById("localUnitInput"),
+        localStartDateInput: document.getElementById("localStartDateInput"), localNoteInput: document.getElementById("localNoteInput"), addLocalBtn: document.getElementById("addLocalBtn")
+      };
+
+      const pad2 = (v) => String(v).padStart(2, "0");
+      const esc = (v) => String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+      const fmtUtc = (d,t) => { if(!d||Number.isNaN(d.getTime())) return "—"; const s=`${pad2(d.getUTCDate())}.${pad2(d.getUTCMonth()+1)}.${d.getUTCFullYear()}`; return t?`${s} ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())} UTC`:s; };
+      const humanU = (u) => ({h:"ч",d:"д",w:"нед",m:"мес"}[u] || u);
+      const remTxt = (ms) => { if(ms<=0) return "Истекла"; const h=Math.floor(ms/3600000); if(h<24) return `${Math.max(h,1)} ч`; const d=Math.floor(ms/86400000); if(d<30) return `${d} д`; const m=Math.floor(d/30); return `${m} мес ${d%30} д`; };
+      const ghUrl = () => `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${encodeURIComponent(GITHUB.path)}`;
+      const b64u = (txt) => btoa(String.fromCharCode(...new TextEncoder().encode(txt)));
+      const ub64 = (b64) => new TextDecoder().decode(Uint8Array.from(atob(b64), c => c.charCodeAt(0)));
+
+      function parseSub(v) {
+        if (v === true) return { type:"lifetime", plan:"Без ограничений", startDate:null, endDate:null, remaining:"∞", statusClass:"lifetime", statusLabel:"Бессрочная", isActive:true, sortEnd:Number.POSITIVE_INFINITY, hasHourGranularity:false };
+        if (typeof v !== "string") return { type:"unknown", plan:"Неизвестно", startDate:null, endDate:null, remaining:"—", statusClass:"unknown", statusLabel:"Неизвестно", isActive:false, sortEnd:Number.NEGATIVE_INFINITY, hasHourGranularity:false };
+        const m = v.trim().match(/^(\d+)([hdwm])\.(\d{1,2})\.(\d{1,2})\.(\d{4})$/i);
+        if (!m) return { type:"unknown", plan:"Неизвестно", startDate:null, endDate:null, remaining:"—", statusClass:"unknown", statusLabel:"Неизвестно", isActive:false, sortEnd:Number.NEGATIVE_INFINITY, hasHourGranularity:false };
+        const a=Number(m[1]), u=m[2].toLowerCase(), d=Number(m[3]), mo=Number(m[4]), y=Number(m[5]);
+        const s = new Date(Date.UTC(y, mo-1, d, 0,0,0)); if (Number.isNaN(s.getTime())) return { type:"unknown", plan:"Неизвестно", startDate:null, endDate:null, remaining:"—", statusClass:"unknown", statusLabel:"Неизвестно", isActive:false, sortEnd:Number.NEGATIVE_INFINITY, hasHourGranularity:false };
+        const e = new Date(s.getTime()); if(u==="h") e.setUTCHours(e.getUTCHours()+a); if(u==="d") e.setUTCDate(e.getUTCDate()+a); if(u==="w") e.setUTCDate(e.getUTCDate()+a*7); if(u==="m") e.setUTCMonth(e.getUTCMonth()+a);
+        const diff=e.getTime()-Date.now(), act=diff>0;
+        return { type:"timed", plan:`${a}${humanU(u)}`, startDate:s, endDate:e, remaining:remTxt(diff), statusClass:act?"active":"expired", statusLabel:act?"Активна":"Истекла", isActive:act, sortEnd:e.getTime(), hasHourGranularity:u==="h" };
+      }
+
+      function mapRemoteRows(raw) { return Object.entries(raw).map(([key,val]) => ({ id:`remote:${key}`, source:"remote", sourceLabel:"GitHub", key, raw:String(val), note:"", ...parseSub(val) })); }
+      function readNotes(){ try{ const v=localStorage.getItem(LOCAL_NOTES_STORAGE_KEY); if(!v) return {}; const obj=JSON.parse(v); return obj&&typeof obj==="object"&&!Array.isArray(obj)?obj:{}; }catch{ return {}; } }
+      function writeNotes(obj){ localStorage.setItem(LOCAL_NOTES_STORAGE_KEY, JSON.stringify(obj)); }
+      function rebuild(){ state.rows = sortRows(state.remoteRows.map((row)=>({ ...row, note: state.notesMap[row.key] || "" }))); }
+      function sortRows(rows){
+        return rows.slice().sort((a,b)=>{
+          const t = {timed:0,lifetime:1,unknown:2}, tA=t[a.type]??3, tB=t[b.type]??3; if(tA!==tB) return tA-tB;
+          if(a.type==="timed"&&b.type==="timed"){ if(a.isActive!==b.isActive) return a.isActive?-1:1; if(a.isActive) return a.sortEnd-b.sortEnd; return b.sortEnd-a.sortEnd; }
+          return a.key.localeCompare(b.key);
+        });
+      }
+
+      function setNotice(type,text){ state.noticeType=type; state.noticeText=text; }
+      function applyFilters(rows){
+        const q=state.query.trim().toLowerCase();
+        return rows.filter(r=>{
+          const okQ=!q||r.key.toLowerCase().includes(q); if(!okQ) return false;
+          if(state.status==="all") return true;
+          if(state.status==="active") return r.type==="timed"&&r.isActive;
+          if(state.status==="expired") return r.type==="timed"&&!r.isActive;
+          if(state.status==="lifetime") return r.type==="lifetime";
+          if(state.status==="unknown") return r.type==="unknown";
+          return true;
+        });
+      }
+
+      function renderStats(){
+        const all=state.rows, active=all.filter(r=>r.type==="timed"&&r.isActive).length, expired=all.filter(r=>r.type==="timed"&&!r.isActive).length, life=all.filter(r=>r.type==="lifetime").length, local=all.filter(r=>r.note && r.note.trim()).length;
+        refs.totalCount.textContent=String(all.length); refs.activeCount.textContent=String(active); refs.expiredCount.textContent=String(expired); refs.lifetimeCount.textContent=String(life); refs.localCount.textContent=String(local);
+      }
+
+      function rowBtn(r){
+        return `<button class="btn-ghost" type="button" title="Удалить" aria-label="Удалить" data-action="delete-remote" data-delete-key="${encodeURIComponent(r.key)}">🗑</button>`;
+      }
+
+      function renderRows(){
+        const list=applyFilters(state.rows);
+        if(!list.length){ refs.rows.innerHTML='<tr><td colspan="10" class="muted">Ничего не найдено по фильтру.</td></tr>'; return; }
+        refs.rows.innerHTML=list.map(r=>`<tr>
+          <td class="mono">${esc(r.key)}</td>
+          <td>${esc(r.plan)}</td>
+          <td>${fmtUtc(r.startDate,r.hasHourGranularity)}</td>
+          <td>${fmtUtc(r.endDate,r.hasHourGranularity)}</td>
+          <td>${esc(r.remaining)}</td>
+          <td><span class="status ${r.statusClass}">${esc(r.statusLabel)}</span></td>
+          <td class="note">${r.note?esc(r.note):"—"}</td>
+          <td><span class="source ${r.source}">${esc(r.sourceLabel)}</span></td>
+          <td class="mono" title="${esc(r.raw)}">${esc(r.raw)}</td>
+          <td>${rowBtn(r)}</td>
+        </tr>`).join('');
+      }
+
+      function renderNotice(){
+        if(!state.noticeText){ refs.notice.className='notice'; refs.notice.textContent=''; return; }
+        refs.notice.className=`notice show ${state.noticeType}`; refs.notice.textContent=state.noticeText;
+      }
+
+      function renderMeta(){
+        const d=state.fetchedAt; refs.updatedAt.textContent=d?`Последнее обновление: ${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`:'Последнее обновление: —';
+        const busy=state.loading||state.saving;
+        refs.refresh.disabled=busy; refs.refresh.textContent=state.loading?'Обновление...':'Обновить';
+        refs.deleteExpiredBtn.disabled=busy; refs.deleteExpiredBtn.textContent=state.saving?'Удаление...':'Удалить все истекшие';
+        refs.addLocalBtn.disabled=busy; refs.addLocalBtn.textContent=state.saving?'Подождите...':'Добавить в GitHub';
+        refs.tokenInput.disabled=state.saving; refs.rememberToken.disabled=state.saving;
+        refs.localKeyInput.disabled=state.saving; refs.localAmountInput.disabled=state.saving; refs.localUnitInput.disabled=state.saving; refs.localStartDateInput.disabled=state.saving; refs.localNoteInput.disabled=state.saving;
+        refs.tokenHint.textContent=refs.tokenInput.value.trim()? 'Токен введен. Доступно добавление и удаление GitHub-записей.' : 'Для записи в GitHub нужен token. Обычный логин в браузере не подходит.';
+      }
+
+      function render(){ renderStats(); renderRows(); renderNotice(); renderMeta(); }
+
+      function buildRawFromInputs(amount,unit,start){
+        const a=Number(amount); if(!Number.isInteger(a)||a<1) throw new Error('Срок должен быть целым числом больше 0');
+        if(!['h','d','w','m'].includes(unit)) throw new Error('Неверная единица срока');
+        if(!start||!/^\d{4}-\d{2}-\d{2}$/.test(start)) throw new Error('Укажите корректную дату старта');
+        const [y,m,d]=start.split('-');
+        return `${a}${unit}.${Number(d)}.${Number(m)}.${Number(y)}`;
+      }
+
+      function setNoteForKey(key,note){
+        const v = note.trim();
+        if(v) state.notesMap[key] = v;
+        else delete state.notesMap[key];
+        writeNotes(state.notesMap);
+      }
+
+      async function addRemoteEntry(){
+        if(state.loading||state.saving) return;
+
+        let token;
+        let key;
+        let rawValue;
+        let note;
+
+        try{
+          token = getToken();
+          key = refs.localKeyInput.value.trim();
+          if(!key) throw new Error('Введите ключ');
+          rawValue = buildRawFromInputs(refs.localAmountInput.value,refs.localUnitInput.value,refs.localStartDateInput.value);
+          if(parseSub(rawValue).type==='unknown') throw new Error('Не удалось распознать срок записи');
+          note = refs.localNoteInput.value.trim();
+        }catch(err){
+          setNotice('error',err.message);
+          render();
+          return;
+        }
+
+        state.saving = true;
+        render();
+
+        try{
+          let save = null;
+          let updatedData = null;
+          for(let attempt=0; attempt<2; attempt++){
+            const remoteFile = await fetchRepoJson(token);
+            const exists = Object.keys(remoteFile.data).some((existingKey)=>existingKey.toLowerCase()===key.toLowerCase());
+            if(exists) throw new Error(`Ключ ${key} уже существует в GitHub`);
+
+            remoteFile.data[key] = rawValue;
+            try{
+              save = await updateRepoJson(token, remoteFile.sha, remoteFile.data, `chore: add key ${key}`);
+              updatedData = remoteFile.data;
+              break;
+            }catch(err){
+              if(isShaConflictError(err) && attempt===0){ continue; }
+              throw err;
+            }
+          }
+
+          if(!save || !updatedData){
+            throw new Error('Конфликт версий файла (sha mismatch). Попробуйте снова.');
+          }
+
+          setNoteForKey(key,note);
+
+          state.remoteRows = mapRemoteRows(updatedData);
+          rebuild();
+          state.fetchedAt = new Date();
+
+          refs.localKeyInput.value = '';
+          refs.localAmountInput.value = '';
+          refs.localNoteInput.value = '';
+
+          const sha = save && save.commit && save.commit.sha ? save.commit.sha.slice(0,7) : '';
+          setNotice('success', sha ? `Ключ ${key} добавлен (commit ${sha}).` : `Ключ ${key} добавлен.`);
+        }catch(err){
+          setNotice('error',`Не удалось добавить ключ в GitHub: ${err.message}`);
+        }finally{
+          state.saving = false;
+          render();
+        }
+      }
+
+      async function parseErr(resp){
+        try{ const d=await resp.json(); if(d&&typeof d.message==='string') return `${d.message} (HTTP ${resp.status})`; }catch{}
+        return `HTTP ${resp.status}`;
+      }
+
+      async function fetchLogsRaw(){
+        const r=await fetch(LOGS_URL,{cache:'no-store'}); if(!r.ok) throw new Error(`Ошибка загрузки (${r.status})`);
+        const data=await r.json(); if(!data||typeof data!=='object'||Array.isArray(data)) throw new Error('Неверный формат JSON');
+        return data;
+      }
+
+      async function loadLogs(){
+        if(state.loading) return; state.loading=true; render();
+        try{
+          const token = refs.tokenInput.value.trim();
+          let data = null;
+
+          if(token){
+            try{
+              const remoteFile = await fetchRepoJson(token);
+              data = remoteFile.data;
+            }catch{
+              data = await fetchLogsRaw();
+            }
+          }else{
+            data = await fetchLogsRaw();
+          }
+
+          state.remoteRows=mapRemoteRows(data); rebuild(); state.fetchedAt=new Date();
+        }
+        catch(err){ setNotice('error',`Не удалось получить логи: ${err.message}`); }
+        finally{ state.loading=false; render(); }
+      }
+
+      function getToken(){
+        const t=refs.tokenInput.value.trim(); if(!t) throw new Error('Введите GitHub token с правом Contents: write');
+        if(refs.rememberToken.checked) localStorage.setItem(TOKEN_STORAGE_KEY,t); else localStorage.removeItem(TOKEN_STORAGE_KEY);
+        return t;
+      }
+
+      async function fetchRepoJson(token){
+        const url=`${ghUrl()}?ref=${encodeURIComponent(GITHUB.branch)}`;
+        const r=await fetch(url,{headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${token}`}});
+        if(!r.ok) throw new Error(await parseErr(r));
+        const file=await r.json(); if(!file||typeof file.sha!=='string'||typeof file.content!=='string') throw new Error('GitHub вернул неожиданный формат файла');
+        const txt=ub64(file.content.replace(/\n/g,'')); const json=JSON.parse(txt); if(!json||typeof json!=='object'||Array.isArray(json)) throw new Error('Файл в репозитории не является JSON-объектом');
+        return {sha:file.sha,data:json};
+      }
+
+      async function updateRepoJson(token,sha,data,message){
+        const body={message,content:b64u(`${JSON.stringify(data,null,2)}\n`),sha,branch:GITHUB.branch};
+        const r=await fetch(ghUrl(),{method:'PUT',headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
+        if(!r.ok){
+          const err = new Error(await parseErr(r));
+          err.status = r.status;
+          throw err;
+        }
+        return r.json();
+      }
+
+      function isShaConflictError(err){
+        return Boolean(err && (err.status===409 || /HTTP 409/.test(String(err.message||''))));
+      }
+      async function mutateRemoteJson(mutator,commitMsgFactory,emptyMsg){
+        if(state.loading||state.saving) return;
+        let token;
+        try{ token=getToken(); }catch(err){ setNotice('error',err.message); render(); return null; }
+        state.saving=true; render();
+        try{
+          for(let attempt=0; attempt<2; attempt++){
+            const remoteFile=await fetchRepoJson(token);
+            const result=mutator(remoteFile.data)||{};
+            const removed=Number(result.removedCount)||0;
+            if(removed<1){ setNotice('info',emptyMsg||'Изменений для удаления не найдено.'); return null; }
+            const msg=typeof commitMsgFactory==='function'?commitMsgFactory(removed):String(commitMsgFactory||'chore: update allowedkeys');
+            try{
+              const save=await updateRepoJson(token,remoteFile.sha,remoteFile.data,msg);
+              state.remoteRows=mapRemoteRows(remoteFile.data); rebuild(); state.fetchedAt=new Date();
+              const sha=save&&save.commit&&save.commit.sha?save.commit.sha.slice(0,7):'';
+              setNotice('success',sha?`Изменения сохранены в GitHub (commit ${sha}).`:'Изменения сохранены в GitHub.');
+              return result;
+            }catch(err){
+              if(isShaConflictError(err) && attempt===0){ continue; }
+              throw err;
+            }
+          }
+          throw new Error('Конфликт версий файла (sha mismatch). Попробуйте снова.');
+        }catch(err){ setNotice('error',`Не удалось записать изменения в GitHub: ${err.message}`); return null; }
+        finally{ state.saving=false; render(); }
+      }
+
+      async function deleteAllExpiredRemote(){
+        const cnt=state.remoteRows.filter(r=>r.type==='timed'&&!r.isActive).length;
+        if(!window.confirm(cnt>0?`Удалить ${cnt} истекших ключей из GitHub?`:'Удалить все истекшие ключи из GitHub?')) return;
+        const result = await mutateRemoteJson(
+          (data)=>{ let removed=0; const removedKeys=[]; for(const k of Object.keys(data)){ const p=parseSub(data[k]); if(p.type==='timed'&&!p.isActive){ delete data[k]; removed++; removedKeys.push(k); } } return {removedCount:removed,removedKeys}; },
+          (c)=>`chore: remove ${c} expired keys`,
+          'Истекших ключей в GitHub файле не найдено.'
+        );
+        if(result && Array.isArray(result.removedKeys) && result.removedKeys.length){
+          for(const k of result.removedKeys){ delete state.notesMap[k]; }
+          writeNotes(state.notesMap);
+          rebuild();
+          render();
+        }
+      }
+
+      async function deleteSingleRemoteKey(key){
+        if(!window.confirm(`Удалить ключ "${key}" из GitHub?`)) return;
+        const result = await mutateRemoteJson(
+          (data)=>{ if(!Object.prototype.hasOwnProperty.call(data,key)) return {removedCount:0}; delete data[key]; return {removedCount:1}; },
+          ()=>`chore: remove key ${key}`,
+          `Ключ ${key} не найден в GitHub файле.`
+        );
+        if(result && result.removedCount > 0){
+          delete state.notesMap[key];
+          writeNotes(state.notesMap);
+          rebuild();
+          render();
+        }
+      }
+
+      refs.search.addEventListener('input',(e)=>{ state.query=e.target.value; renderRows(); });
+      refs.filter.addEventListener('change',(e)=>{ state.status=e.target.value; renderRows(); });
+      refs.refresh.addEventListener('click',()=>loadLogs());
+
+      refs.tokenInput.addEventListener('input',()=>{ if(refs.rememberToken.checked) localStorage.setItem(TOKEN_STORAGE_KEY, refs.tokenInput.value.trim()); renderMeta(); });
+      refs.rememberToken.addEventListener('change',()=>{
+        if(refs.rememberToken.checked){ const t=refs.tokenInput.value.trim(); if(t) localStorage.setItem(TOKEN_STORAGE_KEY,t); }
+        else localStorage.removeItem(TOKEN_STORAGE_KEY);
+        renderMeta();
+      });
+
+      refs.deleteExpiredBtn.addEventListener('click',()=>deleteAllExpiredRemote());
+      refs.addLocalBtn.addEventListener('click',()=>addRemoteEntry());
+      refs.localKeyInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); addRemoteEntry(); }});
+      refs.localNoteInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); addRemoteEntry(); }});
+
+      refs.rows.addEventListener('click',(e)=>{
+        const btn=e.target.closest('button[data-action]'); if(!btn) return;
+        const action=btn.getAttribute('data-action');
+        if(action==='delete-remote'){ const k=btn.getAttribute('data-delete-key'); if(k) deleteSingleRemoteKey(decodeURIComponent(k)); }
+      });
+
+      (function init(){
+        const savedToken=localStorage.getItem(TOKEN_STORAGE_KEY);
+        if(savedToken){ refs.tokenInput.value=savedToken; refs.rememberToken.checked=true; }
+
+        state.notesMap=readNotes();
+        const now=new Date(); refs.localStartDateInput.value=`${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
+        rebuild(); render();
+
+        loadLogs();
+        setInterval(()=>{ if(!state.loading&&!state.saving) loadLogs(); },REFRESH_MS);
+      }());
+    </script>
+  </main>
+</body>
+</html>
