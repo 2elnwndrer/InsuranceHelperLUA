@@ -5,61 +5,169 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Мониторинг подписок</title>
   <style>
-    :root{--bg:#0b2330;--bg2:#123c52;--panel:rgba(6,28,40,.78);--br:rgba(160,215,245,.25);--txt:#e8f7ff;--mut:#99b8c9;--ok:#41d17f;--bad:#ff7777;--warn:#ffc66c}
-    *{box-sizing:border-box} body{margin:0;font-family:Segoe UI,Arial,sans-serif;color:var(--txt);background:radial-gradient(1100px 600px at 100% -10%,#1c556a88,transparent 60%),linear-gradient(150deg,var(--bg),var(--bg2));min-height:100vh}
-    .page{max-width:1200px;margin:0 auto;padding:18px}
-    h1{margin:0 0 6px;font-size:26px}.muted{color:var(--mut)}
-    .panel{border:1px solid var(--br);background:var(--panel);border-radius:12px;padding:10px;margin:0 0 10px}
-    .grid{display:grid;gap:8px}.g-main{grid-template-columns:1fr 220px auto}.g-gh{grid-template-columns:1fr auto auto}.g-local{grid-template-columns:1fr 90px 110px 160px 1fr auto}
-    input,select,button{min-height:38px;border-radius:9px;border:1px solid #88b5ce4f;background:#0d364bcf;color:var(--txt);padding:8px 10px;font:inherit}
-    button{cursor:pointer;font-weight:600;background:linear-gradient(120deg,#48dacc,#48a6da);color:#063548;border:0}
-    button:disabled{opacity:.65;cursor:wait}.btn-danger{background:linear-gradient(120deg,#ff8b8b,#ffb06c);color:#4f1111}.btn-ghost{min-height:30px;padding:5px 8px;background:#184259;border:1px solid #89b9d46a;color:#d9f0ff}
-    .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.card{border:1px solid var(--br);border-radius:10px;padding:10px;background:#0b2f4290}.cap{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.07em}.big{font-size:24px;font-weight:700;margin-top:5px}
-    .notice{display:none;padding:10px;border-radius:10px;margin-bottom:10px}.notice.show{display:block}.notice.info{border:1px solid #7fc8f057;background:#164c695f}.notice.success{border:1px solid #50d28c57;background:#1350325f}.notice.error{border:1px solid #ff8c8c66;background:#60202066}
-    .table{overflow:auto}.table table{width:100%;min-width:980px;border-collapse:collapse}.table th,.table td{padding:10px 8px;border-bottom:1px solid #92b6c433;text-align:left;vertical-align:middle}
-    .table th{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}.mono{font-family:Consolas,monospace}.note{max-width:240px;word-break:break-word}
+    :root{--bg:#061722;--bg2:#0b2d41;--bg3:#0f3a4f;--panel:rgba(10,34,48,.84);--br:rgba(148,199,224,.28);--txt:#eaf7ff;--mut:#a4c1d2;--ok:#41d17f;--bad:#ff7777;--warn:#ffc66c;--acc:#52d8c8;--acc2:#5fb9ff;--shadow:0 14px 34px rgba(2,11,19,.34)}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Segoe UI,Tahoma,Arial,sans-serif;color:var(--txt);line-height:1.4;background:radial-gradient(1100px 620px at -12% -18%,#2c6f9657,transparent 62%),radial-gradient(900px 500px at 100% 0,#2f8d8550,transparent 56%),linear-gradient(160deg,var(--bg),var(--bg2) 58%,var(--bg3));min-height:100vh}
+    .page{max-width:1240px;margin:0 auto;padding:22px 18px 28px}
+    .hero{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin:0 0 14px}
+    h1{margin:0 0 6px;font-size:30px;letter-spacing:.01em}
+    .lead{margin:0 0 6px}
+    .muted{color:var(--mut)}
+    .panel{border:1px solid var(--br);background:var(--panel);border-radius:14px;padding:14px;margin:0 0 12px;backdrop-filter:blur(5px);box-shadow:var(--shadow)}
+    .panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 10px}
+    .panel-title{margin:0;font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:#c7e6f8}
+    .panel-note{margin:0;font-size:13px;color:var(--mut)}
+    .grid{display:grid;gap:10px}
+    .g-main{grid-template-columns:1fr 230px 190px}
+    .g-gh{grid-template-columns:1fr 240px 230px}
+    .g-local{grid-template-columns:1fr 200px 95px 115px 150px 100px 1fr 185px}
+    .field{display:flex;flex-direction:column;gap:6px;min-width:0}
+    .field-label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#b5d4e5}
+    .checkline{display:flex;align-items:center;gap:8px;min-height:40px;align-self:end;padding-bottom:3px}
+    .hint{margin:0 0 12px;font-size:13px}
+    input,select,button{min-height:40px;border-radius:10px;border:1px solid #8ab8d058;background:#103b52cc;color:var(--txt);padding:8px 10px;font:inherit;transition:border-color .18s ease,box-shadow .18s ease,transform .1s ease}
+    input::placeholder{color:#a4c5d7be}
+    input:focus,select:focus{outline:none;border-color:#7bd9d0;box-shadow:0 0 0 3px #61d2ca2b}
+    input:disabled,select:disabled{opacity:.62}
+    input[type="checkbox"]{min-height:16px;width:16px;height:16px;padding:0;accent-color:#58d7c9;cursor:pointer}
+    button{cursor:pointer;font-weight:700;background:linear-gradient(120deg,var(--acc),var(--acc2));color:#083347;border:0}
+    button:hover{transform:translateY(-1px)}
+    button:disabled{opacity:.65;cursor:wait;transform:none}
+    .btn-danger{background:linear-gradient(120deg,#ff8b94,#ffb66f);color:#551313}
+    .btn-secondary{background:#194b64;border:1px solid #95c8df75;color:#e8f6ff}
+    .btn-ghost{min-height:32px;padding:6px 12px;background:#184259;border:1px solid #89b9d46a;color:#d9f0ff}
+    .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:0 0 12px}
+    .card{position:relative;overflow:hidden;border:1px solid var(--br);border-radius:12px;padding:12px;background:#0d314594;box-shadow:var(--shadow)}
+    .card::after{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--acc),#7ed9ef)}
+    .cap{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.07em}
+    .big{font-size:26px;font-weight:700;margin-top:6px}
+    .notice{display:none;padding:11px 12px;border-radius:10px;margin-bottom:12px}
+    .notice.show{display:block}
+    .notice.info{border:1px solid #7fc8f057;background:#164c695f}
+    .notice.success{border:1px solid #50d28c57;background:#1350325f}
+    .notice.error{border:1px solid #ff8c8c66;background:#60202066}
+    .table{overflow:auto}
+    .table table{width:100%;min-width:980px;border-collapse:collapse}
+    .table th,.table td{padding:10px 8px;border-bottom:1px solid #92b6c433;text-align:left;vertical-align:middle}
+    .table th{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+    .th-sort{display:inline-flex;align-items:center;gap:6px;min-height:auto;padding:0;border:0;background:transparent;color:inherit;font:inherit;font-weight:700;letter-spacing:inherit;text-transform:inherit}
+    .th-sort:hover{transform:none;color:#d8f0ff}
+    .th-sort:focus-visible{outline:2px solid #75ddd4;outline-offset:2px;border-radius:4px}
+    .th-sort.active{color:#e8f8ff}
+    .th-sort .sort-ind{font-size:11px;line-height:1;color:#93bbcf;min-width:10px}
+    .th-sort.active .sort-ind{color:#7fd9cc}
+    .mono{font-family:Consolas,monospace}
+    .note{max-width:260px;word-break:break-word}
     .status{display:inline-flex;border-radius:999px;padding:3px 9px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;border:1px solid transparent}
-    .active{color:var(--ok);background:#43d27f22;border-color:#43d27f66}.expired{color:var(--bad);background:#ff6e6e22;border-color:#ff6e6e66}.lifetime{color:var(--warn);background:#ffc66c22;border-color:#ffc66c66}.unknown{color:#d4e4ee;background:#d4e4ee22;border-color:#d4e4ee55}
+    .active{color:var(--ok);background:#43d27f22;border-color:#43d27f66}
+    .expired{color:var(--bad);background:#ff6e6e22;border-color:#ff6e6e66}
+    .lifetime{color:var(--warn);background:#ffc66c22;border-color:#ffc66c66}
+    .unknown{color:#d4e4ee;background:#d4e4ee22;border-color:#d4e4ee55}
     .fresh-row td{background:linear-gradient(90deg,rgba(72,218,204,.14),rgba(72,166,218,.08))}
     .fresh-row td:first-child{border-left:3px solid #48dacc}
-    @media (max-width:1080px){.g-main,.g-gh,.g-local{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:1210px){.g-local{grid-template-columns:1fr 1fr 90px 120px 160px 110px 1fr 185px}}
+    @media (max-width:1080px){.hero{align-items:flex-start}.g-main,.g-gh,.g-local{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.checkline{padding-bottom:0}.note{max-width:unset}}
   </style>
 </head>
 <body>
   <main class="page">
-    <h1>Отслеживание подписки пользователей</h1>
-    <div class="muted" id="updatedAt">Последнее обновление: —</div>
+    <header class="hero">
+      <div>
+        <h1>Управление подписками пользователей</h1>
+        <p class="muted lead">Просмотр ключей, фильтрация статусов и выдача новых подписок в одном месте.</p>
+        <div class="muted" id="updatedAt">Последнее обновление: —</div>
+      </div>
+    </header>
 
-    <section class="panel grid g-main">
-      <input id="searchInput" type="search" placeholder="Поиск по ключу...">
-      <select id="statusFilter">
-        <option value="all">Все статусы</option>
-        <option value="active">Активные</option>
-        <option value="expired">Истекшие</option>
-        <option value="lifetime">Бессрочные</option>
-        <option value="unknown">Неизвестный формат</option>
-      </select>
-      <button id="refreshBtn" type="button">Обновить</button>
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Мониторинг</h2>
+        <p class="panel-note">Поиск и фильтр по текущему списку ключей.</p>
+      </div>
+      <div class="grid g-main">
+        <label class="field" for="searchInput">
+          <span class="field-label">Поиск по ключу</span>
+          <input id="searchInput" type="search" placeholder="Введите часть ключа">
+        </label>
+        <label class="field" for="statusFilter">
+          <span class="field-label">Статус</span>
+          <select id="statusFilter">
+            <option value="all">Все статусы</option>
+            <option value="active">Активные</option>
+            <option value="expired">Истекшие</option>
+            <option value="lifetime">Бессрочные</option>
+            <option value="unknown">Неизвестный формат</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-label">Данные</span>
+          <button id="refreshBtn" class="btn-secondary" type="button">Обновить сейчас</button>
+        </label>
+      </div>
     </section>
 
-    <section class="panel grid g-gh">
-      <input id="tokenInput" type="password" placeholder="GitHub token с правом Contents: write">
-      <label class="muted"><input id="rememberToken" type="checkbox"> Запомнить токен</label>
-      <button id="deleteExpiredBtn" class="btn-danger" type="button">Удалить все истекшие</button>
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Доступ к GitHub</h2>
+        <p class="panel-note">Для добавления и удаления ключей нужен token с правом Contents: write.</p>
+      </div>
+      <div class="grid g-gh">
+        <label class="field" for="tokenInput">
+          <span class="field-label">GitHub token</span>
+          <input id="tokenInput" type="password" placeholder="Введите token с правом Contents: write">
+        </label>
+        <label class="checkline muted"><input id="rememberToken" type="checkbox"> Запомнить токен</label>
+        <button id="deleteExpiredBtn" class="btn-danger" type="button">Удалить все истекшие</button>
+      </div>
     </section>
-    <div class="muted" id="tokenHint" style="margin:0 0 10px">Для записи в GitHub нужен token. Обычный логин в браузере не подходит.</div>
+    <p class="muted hint" id="tokenHint">Для записи в GitHub нужен token. Обычный логин в браузере не подходит.</p>
 
-    <section class="panel grid g-local">
-      <input id="localKeyInput" type="text" placeholder="Ключ">
-      <input id="localAmountInput" type="number" min="1" step="1" placeholder="Срок">
-      <select id="localUnitInput"><option value="d">Дни</option><option value="h">Часы</option><option value="w">Недели</option><option value="m">Месяцы</option></select>
-      <input id="localStartDateInput" type="date">
-      <input id="localNoteInput" type="text" placeholder="Заметка (кто это)">
-      <button id="addLocalBtn" type="button">Добавить в GitHub</button>
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Выдача подписки</h2>
+        <p class="panel-note">Запись добавляется в GitHub, а заметка хранится только локально.</p>
+      </div>
+      <div class="grid g-local">
+        <label class="field" for="localKeyInput">
+          <span class="field-label">Ключ</span>
+          <input id="localKeyInput" type="text" placeholder="Введите новый ключ">
+        </label>
+        <label class="field" for="localTypeInput">
+          <span class="field-label">Тип подписки</span>
+          <select id="localTypeInput">
+            <option value="timed">Ограниченная</option>
+            <option value="lifetime">Бессрочная (true)</option>
+          </select>
+        </label>
+        <label class="field" for="localAmountInput">
+          <span class="field-label">Срок</span>
+          <input id="localAmountInput" type="number" min="1" step="1" placeholder="Срок">
+        </label>
+        <label class="field" for="localUnitInput">
+          <span class="field-label">Единица</span>
+          <select id="localUnitInput"><option value="d">Дни</option><option value="h">Часы</option><option value="w">Недели</option><option value="m">Месяцы</option></select>
+        </label>
+        <label class="field" for="localStartDateInput">
+          <span class="field-label">Дата старта</span>
+          <input id="localStartDateInput" type="date">
+        </label>
+        <label class="field" for="localStartTimeInput">
+          <span class="field-label">Время</span>
+          <input id="localStartTimeInput" type="time" step="60">
+        </label>
+        <label class="field" for="localNoteInput">
+          <span class="field-label">Заметка</span>
+          <input id="localNoteInput" type="text" placeholder="Кто это / комментарий">
+        </label>
+        <label class="field">
+          <span class="field-label">Действие</span>
+          <button id="addLocalBtn" type="button">Добавить в GitHub</button>
+        </label>
+      </div>
     </section>
-    <div class="muted" style="margin:0 0 10px">Запись добавляется в GitHub, а заметка хранится только локально в этом браузере.</div>
+    <p class="muted hint">Время старта считается по Казахстану (UTC+5). Для бессрочной подписки в файл будет записано значение `true`.</p>
 
-    <section class="stats" style="margin:0 0 10px">
+    <section class="stats">
       <article class="card"><div class="cap">Всего</div><div class="big" id="totalCount">0</div></article>
       <article class="card"><div class="cap">Активные</div><div class="big" id="activeCount">0</div></article>
       <article class="card"><div class="cap">Истекшие</div><div class="big" id="expiredCount">0</div></article>
@@ -70,9 +178,22 @@
     <div id="noticeBox" class="notice"></div>
 
     <section class="panel table">
+      <div class="panel-head">
+        <h2 class="panel-title">Список ключей</h2>
+        <p class="panel-note">Удаление выполняется напрямую в GitHub.</p>
+      </div>
       <table>
-        <thead>
-          <tr><th>Ключ</th><th>Тариф</th><th>Старт</th><th>Окончание</th><th>Осталось</th><th>Статус</th><th>Заметка</th><th>Действия</th></tr>
+        <thead id="tableHead">
+          <tr>
+            <th><button class="th-sort" type="button" data-sort="key">Ключ <span class="sort-ind"></span></button></th>
+            <th><button class="th-sort" type="button" data-sort="plan">Тариф <span class="sort-ind"></span></button></th>
+            <th><button class="th-sort" type="button" data-sort="start">Старт <span class="sort-ind"></span></button></th>
+            <th><button class="th-sort" type="button" data-sort="end">Окончание <span class="sort-ind"></span></button></th>
+            <th><button class="th-sort" type="button" data-sort="remaining">Осталось <span class="sort-ind"></span></button></th>
+            <th><button class="th-sort" type="button" data-sort="status">Статус <span class="sort-ind"></span></button></th>
+            <th><button class="th-sort" type="button" data-sort="note">Заметка <span class="sort-ind"></span></button></th>
+            <th>Действие</th>
+          </tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
@@ -83,58 +204,149 @@
       const REFRESH_MS = 120000;
       const TOKEN_STORAGE_KEY = "inshelper_github_token";
       const LOCAL_NOTES_STORAGE_KEY = "inshelper_local_notes_v1";
-      const LAST_ADDED_KEY_STORAGE_KEY = "inshelper_last_added_key";
+      const SORT_STORAGE_KEY = "inshelper_table_sort_v1";
       const GITHUB = { owner: "2elnwndrer", repo: "InsuranceHelperLUA", path: "allowedkeys.json", branch: "main" };
+      const SORT_FIELDS = new Set(["key","plan","start","end","remaining","status","note"]);
 
-      const state = { rows: [], remoteRows: [], notesMap: {}, latestAddedKey: "", query: "", status: "all", fetchedAt: null, loading: false, saving: false, noticeText: "", noticeType: "info" };
+      function readSortPrefs(){
+        try{
+          const raw = localStorage.getItem(SORT_STORAGE_KEY);
+          if(!raw) return { sortBy:"default", sortDir:"asc" };
+          const parsed = JSON.parse(raw);
+          const sortBy = SORT_FIELDS.has(parsed && parsed.sortBy) ? parsed.sortBy : "default";
+          const sortDir = sortBy==="default" ? "asc" : (parsed && parsed.sortDir === "desc" ? "desc" : "asc");
+          return { sortBy, sortDir };
+        }catch{
+          return { sortBy:"default", sortDir:"asc" };
+        }
+      }
+      function saveSortPrefs(){
+        try{ localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify({ sortBy: state.sortBy, sortDir: state.sortDir })); }catch{}
+      }
+      const initialSort = readSortPrefs();
+      const state = { rows: [], remoteRows: [], notesMap: {}, latestAddedKey: "", query: "", status: "all", sortBy: initialSort.sortBy, sortDir: initialSort.sortDir, fetchedAt: null, loading: false, saving: false, noticeText: "", noticeType: "info" };
 
       const refs = {
         rows: document.getElementById("rows"), search: document.getElementById("searchInput"), filter: document.getElementById("statusFilter"), refresh: document.getElementById("refreshBtn"),
+        tableHead: document.getElementById("tableHead"),
         updatedAt: document.getElementById("updatedAt"), notice: document.getElementById("noticeBox"), totalCount: document.getElementById("totalCount"), activeCount: document.getElementById("activeCount"),
         expiredCount: document.getElementById("expiredCount"), lifetimeCount: document.getElementById("lifetimeCount"), localCount: document.getElementById("localCount"),
         tokenInput: document.getElementById("tokenInput"), rememberToken: document.getElementById("rememberToken"), deleteExpiredBtn: document.getElementById("deleteExpiredBtn"), tokenHint: document.getElementById("tokenHint"),
-        localKeyInput: document.getElementById("localKeyInput"), localAmountInput: document.getElementById("localAmountInput"), localUnitInput: document.getElementById("localUnitInput"),
-        localStartDateInput: document.getElementById("localStartDateInput"), localNoteInput: document.getElementById("localNoteInput"), addLocalBtn: document.getElementById("addLocalBtn")
+        localKeyInput: document.getElementById("localKeyInput"), localTypeInput: document.getElementById("localTypeInput"), localAmountInput: document.getElementById("localAmountInput"), localUnitInput: document.getElementById("localUnitInput"),
+        localStartDateInput: document.getElementById("localStartDateInput"), localStartTimeInput: document.getElementById("localStartTimeInput"), localNoteInput: document.getElementById("localNoteInput"), addLocalBtn: document.getElementById("addLocalBtn")
       };
 
       const pad2 = (v) => String(v).padStart(2, "0");
       const esc = (v) => String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-      const fmtUtc = (d,t) => { if(!d||Number.isNaN(d.getTime())) return "—"; const s=`${pad2(d.getUTCDate())}.${pad2(d.getUTCMonth()+1)}.${d.getUTCFullYear()}`; return t?`${s} ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())} UTC`:s; };
+      const KZ_OFFSET_MINUTES = 5 * 60; // UTC+5 (Казахстан)
+      const fmtKz = (d,t) => {
+        if(!d||Number.isNaN(d.getTime())) return "—";
+        const kz = new Date(d.getTime() + (KZ_OFFSET_MINUTES * 60000));
+        const s=`${pad2(kz.getUTCDate())}.${pad2(kz.getUTCMonth()+1)}.${kz.getUTCFullYear()}`;
+        return t?`${s} ${pad2(kz.getUTCHours())}:${pad2(kz.getUTCMinutes())} KZ`:s;
+      };
       const humanU = (u) => ({h:"ч",d:"д",w:"нед",m:"мес"}[u] || u);
       const remTxt = (ms) => { if(ms<=0) return "Истекла"; const h=Math.floor(ms/3600000); if(h<24) return `${Math.max(h,1)} ч`; const d=Math.floor(ms/86400000); if(d<30) return `${d} д`; const m=Math.floor(d/30); return `${m} мес ${d%30} д`; };
       const ghUrl = () => `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${encodeURIComponent(GITHUB.path)}`;
       const b64u = (txt) => btoa(String.fromCharCode(...new TextEncoder().encode(txt)));
       const ub64 = (b64) => new TextDecoder().decode(Uint8Array.from(atob(b64), c => c.charCodeAt(0)));
+      const isLifetimeMode = () => refs.localTypeInput.value === "lifetime";
 
       function parseSub(v) {
-        if (v === true) return { type:"lifetime", plan:"Без ограничений", startDate:null, endDate:null, remaining:"∞", statusClass:"lifetime", statusLabel:"Бессрочная", isActive:true, sortEnd:Number.POSITIVE_INFINITY, hasHourGranularity:false };
-        if (typeof v !== "string") return { type:"unknown", plan:"Неизвестно", startDate:null, endDate:null, remaining:"—", statusClass:"unknown", statusLabel:"Неизвестно", isActive:false, sortEnd:Number.NEGATIVE_INFINITY, hasHourGranularity:false };
-        const m = v.trim().match(/^(\d+)([hdwm])\.(\d{1,2})\.(\d{1,2})\.(\d{4})$/i);
-        if (!m) return { type:"unknown", plan:"Неизвестно", startDate:null, endDate:null, remaining:"—", statusClass:"unknown", statusLabel:"Неизвестно", isActive:false, sortEnd:Number.NEGATIVE_INFINITY, hasHourGranularity:false };
+        if (v === true || (typeof v === "string" && v.trim().toLowerCase() === "true")) return { type:"lifetime", plan:"Без ограничений", startDate:null, endDate:null, remaining:"∞", statusClass:"lifetime", statusLabel:"Бессрочная", isActive:true, sortEnd:Number.POSITIVE_INFINITY, showTime:false };
+        if (typeof v !== "string") return { type:"unknown", plan:"Неизвестно", startDate:null, endDate:null, remaining:"—", statusClass:"unknown", statusLabel:"Неизвестно", isActive:false, sortEnd:Number.NEGATIVE_INFINITY, showTime:false };
+
+        const m = v.trim().match(/^(\d+)([hdwm])\.(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s*-\s*(\d{1,2}):(\d{2}))?$/i);
+        if (!m) return { type:"unknown", plan:"Неизвестно", startDate:null, endDate:null, remaining:"—", statusClass:"unknown", statusLabel:"Неизвестно", isActive:false, sortEnd:Number.NEGATIVE_INFINITY, showTime:false };
+
         const a=Number(m[1]), u=m[2].toLowerCase(), d=Number(m[3]), mo=Number(m[4]), y=Number(m[5]);
-        const s = new Date(Date.UTC(y, mo-1, d, 0,0,0)); if (Number.isNaN(s.getTime())) return { type:"unknown", plan:"Неизвестно", startDate:null, endDate:null, remaining:"—", statusClass:"unknown", statusLabel:"Неизвестно", isActive:false, sortEnd:Number.NEGATIVE_INFINITY, hasHourGranularity:false };
+        const h = m[6] !== undefined ? Number(m[6]) : 0;
+        const min = m[7] !== undefined ? Number(m[7]) : 0;
+        if(h < 0 || h > 23 || min < 0 || min > 59){
+          return { type:"unknown", plan:"Неизвестно", startDate:null, endDate:null, remaining:"—", statusClass:"unknown", statusLabel:"Неизвестно", isActive:false, sortEnd:Number.NEGATIVE_INFINITY, showTime:false };
+        }
+
+        // Входные дата/время трактуются как время Казахстана (UTC+5).
+        const startUtcMs = Date.UTC(y, mo-1, d, h, min, 0) - (KZ_OFFSET_MINUTES * 60000);
+        const s = new Date(startUtcMs);
+        if (Number.isNaN(s.getTime())) return { type:"unknown", plan:"Неизвестно", startDate:null, endDate:null, remaining:"—", statusClass:"unknown", statusLabel:"Неизвестно", isActive:false, sortEnd:Number.NEGATIVE_INFINITY, showTime:false };
+
         const e = new Date(s.getTime()); if(u==="h") e.setUTCHours(e.getUTCHours()+a); if(u==="d") e.setUTCDate(e.getUTCDate()+a); if(u==="w") e.setUTCDate(e.getUTCDate()+a*7); if(u==="m") e.setUTCMonth(e.getUTCMonth()+a);
         const diff=e.getTime()-Date.now(), act=diff>0;
-        return { type:"timed", plan:`${a}${humanU(u)}`, startDate:s, endDate:e, remaining:remTxt(diff), statusClass:act?"active":"expired", statusLabel:act?"Активна":"Истекла", isActive:act, sortEnd:e.getTime(), hasHourGranularity:u==="h" };
+        const hasExplicitTime = m[6] !== undefined;
+        return { type:"timed", plan:`${a}${humanU(u)}`, startDate:s, endDate:e, remaining:remTxt(diff), statusClass:act?"active":"expired", statusLabel:act?"Активна":"Истекла", isActive:act, sortEnd:e.getTime(), showTime:(u==="h" || hasExplicitTime) };
       }
 
       function mapRemoteRows(raw) { return Object.entries(raw).map(([key,val]) => ({ id:`remote:${key}`, key, raw:String(val), note:"", ...parseSub(val) })); }
       function readNotes(){ try{ const v=localStorage.getItem(LOCAL_NOTES_STORAGE_KEY); if(!v) return {}; const obj=JSON.parse(v); return obj&&typeof obj==="object"&&!Array.isArray(obj)?obj:{}; }catch{ return {}; } }
       function writeNotes(obj){ localStorage.setItem(LOCAL_NOTES_STORAGE_KEY, JSON.stringify(obj)); }
-      function setLatestAddedKey(key){
-        state.latestAddedKey = key || "";
-        if(state.latestAddedKey) localStorage.setItem(LAST_ADDED_KEY_STORAGE_KEY, state.latestAddedKey);
-        else localStorage.removeItem(LAST_ADDED_KEY_STORAGE_KEY);
+      function setLatestAddedKey(key){ state.latestAddedKey = key || ""; }
+      function txtCmp(a,b){ return String(a||"").localeCompare(String(b||""),"ru",{sensitivity:"base"}); }
+      function numCmp(a,b){ return a===b ? 0 : (a<b ? -1 : 1); }
+      function fallbackSort(a,b){
+        const t = {timed:0,lifetime:1,unknown:2}, tA=t[a.type]??3, tB=t[b.type]??3; if(tA!==tB) return tA-tB;
+        if(a.type==="timed"&&b.type==="timed"){ if(a.isActive!==b.isActive) return a.isActive?-1:1; if(a.isActive) return a.sortEnd-b.sortEnd; return b.sortEnd-a.sortEnd; }
+        return txtCmp(a.key,b.key);
       }
-      function rebuild(){ state.rows = sortRows(state.remoteRows.map((row)=>({ ...row, note: state.notesMap[row.key] || "" }))); }
+      function rowStartValue(r){ return r.startDate && !Number.isNaN(r.startDate.getTime()) ? r.startDate.getTime() : Number.POSITIVE_INFINITY; }
+      function rowEndValue(r){ return r.endDate && !Number.isNaN(r.endDate.getTime()) ? r.endDate.getTime() : Number.POSITIVE_INFINITY; }
+      function rowRemainingRank(r, now){
+        if(r.type==="timed"){
+          const diff = rowEndValue(r) - now;
+          if(r.isActive) return [0, diff];
+          return [1, Math.abs(diff)];
+        }
+        if(r.type==="lifetime") return [2, Number.POSITIVE_INFINITY];
+        return [3, Number.POSITIVE_INFINITY];
+      }
+      function rowStatusRank(r){
+        if(r.type==="timed" && r.isActive) return 0;
+        if(r.type==="lifetime") return 1;
+        if(r.type==="timed" && !r.isActive) return 2;
+        return 3;
+      }
+      function compareBySelectedSort(a,b,now){
+        if(state.sortBy==="key") return txtCmp(a.key,b.key);
+        if(state.sortBy==="plan") return txtCmp(a.plan,b.plan);
+        if(state.sortBy==="start") return numCmp(rowStartValue(a),rowStartValue(b));
+        if(state.sortBy==="end") return numCmp(rowEndValue(a),rowEndValue(b));
+        if(state.sortBy==="status") return numCmp(rowStatusRank(a),rowStatusRank(b));
+        if(state.sortBy==="note") return txtCmp(a.note,b.note);
+        if(state.sortBy==="remaining"){
+          const [aRank,aVal]=rowRemainingRank(a,now), [bRank,bVal]=rowRemainingRank(b,now);
+          if(aRank!==bRank) return aRank-bRank;
+          return numCmp(aVal,bVal);
+        }
+        return fallbackSort(a,b);
+      }
       function sortRows(rows){
+        const now = Date.now();
+        const dir = state.sortDir==="desc" ? -1 : 1;
         return rows.slice().sort((a,b)=>{
           const aTop = state.latestAddedKey && a.key === state.latestAddedKey;
           const bTop = state.latestAddedKey && b.key === state.latestAddedKey;
           if(aTop !== bTop) return aTop ? -1 : 1;
-          const t = {timed:0,lifetime:1,unknown:2}, tA=t[a.type]??3, tB=t[b.type]??3; if(tA!==tB) return tA-tB;
-          if(a.type==="timed"&&b.type==="timed"){ if(a.isActive!==b.isActive) return a.isActive?-1:1; if(a.isActive) return a.sortEnd-b.sortEnd; return b.sortEnd-a.sortEnd; }
-          return a.key.localeCompare(b.key);
+          const cmp = compareBySelectedSort(a,b,now);
+          if(cmp!==0) return cmp * dir;
+          return fallbackSort(a,b);
+        });
+      }
+      function rebuild(){ state.rows = sortRows(state.remoteRows.map((row)=>({ ...row, note: state.notesMap[row.key] || "" }))); }
+      function setSort(sortBy){
+        if(!SORT_FIELDS.has(sortBy)) return;
+        if(state.sortBy===sortBy) state.sortDir = state.sortDir==="asc" ? "desc" : "asc";
+        else { state.sortBy = sortBy; state.sortDir = "asc"; }
+        saveSortPrefs();
+        rebuild();
+        render();
+      }
+      function renderSortButtons(){
+        if(!refs.tableHead) return;
+        refs.tableHead.querySelectorAll('button[data-sort]').forEach((btn)=>{
+          const isActive = btn.getAttribute('data-sort')===state.sortBy;
+          btn.classList.toggle('active', isActive);
+          const mark = btn.querySelector('.sort-ind');
+          if(mark) mark.textContent = isActive ? (state.sortDir==="asc" ? "▲" : "▼") : "";
         });
       }
 
@@ -158,7 +370,7 @@
       }
 
       function rowBtn(r){
-        return `<button class="btn-ghost" type="button" title="Удалить" aria-label="Удалить" data-action="delete-remote" data-delete-key="${encodeURIComponent(r.key)}">🗑</button>`;
+        return `<button class="btn-ghost" type="button" title="Удалить" aria-label="Удалить" data-action="delete-remote" data-delete-key="${encodeURIComponent(r.key)}">Удалить</button>`;
       }
 
       function renderRows(){
@@ -167,8 +379,8 @@
         refs.rows.innerHTML=list.map(r=>`<tr class="${state.latestAddedKey && r.key===state.latestAddedKey ? 'fresh-row' : ''}">
           <td class="mono">${esc(r.key)}</td>
           <td>${esc(r.plan)}</td>
-          <td>${fmtUtc(r.startDate,r.hasHourGranularity)}</td>
-          <td>${fmtUtc(r.endDate,r.hasHourGranularity)}</td>
+          <td>${fmtKz(r.startDate,r.showTime)}</td>
+          <td>${fmtKz(r.endDate,r.showTime)}</td>
           <td>${esc(r.remaining)}</td>
           <td><span class="status ${r.statusClass}">${esc(r.statusLabel)}</span></td>
           <td class="note">${r.note?esc(r.note):"—"}</td>
@@ -184,22 +396,38 @@
       function renderMeta(){
         const d=state.fetchedAt; refs.updatedAt.textContent=d?`Последнее обновление: ${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`:'Последнее обновление: —';
         const busy=state.loading||state.saving;
-        refs.refresh.disabled=busy; refs.refresh.textContent=state.loading?'Обновление...':'Обновить';
+        const lifetimeMode = isLifetimeMode();
+        refs.refresh.disabled=busy; refs.refresh.textContent=state.loading?'Обновление...':'Обновить сейчас';
         refs.deleteExpiredBtn.disabled=busy; refs.deleteExpiredBtn.textContent=state.saving?'Удаление...':'Удалить все истекшие';
         refs.addLocalBtn.disabled=busy; refs.addLocalBtn.textContent=state.saving?'Подождите...':'Добавить в GitHub';
         refs.tokenInput.disabled=state.saving; refs.rememberToken.disabled=state.saving;
-        refs.localKeyInput.disabled=state.saving; refs.localAmountInput.disabled=state.saving; refs.localUnitInput.disabled=state.saving; refs.localStartDateInput.disabled=state.saving; refs.localNoteInput.disabled=state.saving;
+        refs.localKeyInput.disabled=state.saving; refs.localTypeInput.disabled=state.saving; refs.localAmountInput.disabled=state.saving||lifetimeMode; refs.localUnitInput.disabled=state.saving||lifetimeMode; refs.localStartDateInput.disabled=state.saving||lifetimeMode; refs.localStartTimeInput.disabled=state.saving||lifetimeMode; refs.localNoteInput.disabled=state.saving;
+        refs.localAmountInput.placeholder=lifetimeMode?'Не требуется':'Срок';
         refs.tokenHint.textContent=refs.tokenInput.value.trim()? 'Токен введен. Доступно добавление и удаление GitHub-записей.' : 'Для записи в GitHub нужен token. Обычный логин в браузере не подходит.';
       }
 
-      function render(){ renderStats(); renderRows(); renderNotice(); renderMeta(); }
+      function render(){ renderStats(); renderRows(); renderSortButtons(); renderNotice(); renderMeta(); }
 
-      function buildRawFromInputs(amount,unit,start){
+      function buildRawFromInputs(amount,unit,startDate,startTime){
         const a=Number(amount); if(!Number.isInteger(a)||a<1) throw new Error('Срок должен быть целым числом больше 0');
         if(!['h','d','w','m'].includes(unit)) throw new Error('Неверная единица срока');
-        if(!start||!/^\d{4}-\d{2}-\d{2}$/.test(start)) throw new Error('Укажите корректную дату старта');
-        const [y,m,d]=start.split('-');
-        return `${a}${unit}.${Number(d)}.${Number(m)}.${Number(y)}`;
+        if(!startDate||!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) throw new Error('Укажите корректную дату старта');
+        const [y,m,d]=startDate.split('-');
+
+        let suffix = '';
+        if(startTime){
+          if(!/^\d{2}:\d{2}$/.test(startTime)) throw new Error('Неверный формат времени старта');
+          const [hh,mm] = startTime.split(':').map(Number);
+          if(hh < 0 || hh > 23 || mm < 0 || mm > 59) throw new Error('Неверное время старта');
+          if(hh !== 0 || mm !== 0) suffix = ` - ${pad2(hh)}:${pad2(mm)}`;
+        }
+
+        return `${a}${unit}.${Number(d)}.${Number(m)}.${Number(y)}${suffix}`;
+      }
+
+      function buildRawForNewEntry(){
+        if(isLifetimeMode()) return true;
+        return buildRawFromInputs(refs.localAmountInput.value,refs.localUnitInput.value,refs.localStartDateInput.value,refs.localStartTimeInput.value);
       }
 
       function setNoteForKey(key,note){
@@ -221,7 +449,7 @@
           token = getToken();
           key = refs.localKeyInput.value.trim();
           if(!key) throw new Error('Введите ключ');
-          rawValue = buildRawFromInputs(refs.localAmountInput.value,refs.localUnitInput.value,refs.localStartDateInput.value);
+          rawValue = buildRawForNewEntry();
           if(parseSub(rawValue).type==='unknown') throw new Error('Не удалось распознать срок записи');
           note = refs.localNoteInput.value.trim();
         }catch(err){
@@ -390,23 +618,41 @@
 
       async function deleteSingleRemoteKey(key){
         if(!window.confirm(`Удалить ключ "${key}" из GitHub?`)) return;
+        const prevRemoteRows = state.remoteRows.slice();
+        const prevNotesMap = { ...state.notesMap };
+        const prevLatest = state.latestAddedKey;
+
+        state.remoteRows = state.remoteRows.filter((row)=>row.key!==key);
+        delete state.notesMap[key];
+        if(state.latestAddedKey === key) setLatestAddedKey("");
+        rebuild();
+        render();
+
         const result = await mutateRemoteJson(
           (data)=>{ if(!Object.prototype.hasOwnProperty.call(data,key)) return {removedCount:0}; delete data[key]; return {removedCount:1}; },
           ()=>`chore: remove key ${key}`,
           `Ключ ${key} не найден в GitHub файле.`
         );
         if(result && result.removedCount > 0){
-          delete state.notesMap[key];
-          if(state.latestAddedKey === key) setLatestAddedKey("");
           writeNotes(state.notesMap);
-          rebuild();
-          render();
+          return;
         }
+        state.remoteRows = prevRemoteRows;
+        state.notesMap = prevNotesMap;
+        state.latestAddedKey = prevLatest;
+        rebuild();
+        render();
       }
 
       refs.search.addEventListener('input',(e)=>{ state.query=e.target.value; renderRows(); });
       refs.filter.addEventListener('change',(e)=>{ state.status=e.target.value; renderRows(); });
       refs.refresh.addEventListener('click',()=>loadLogs());
+      refs.tableHead.addEventListener('click',(e)=>{
+        const btn=e.target.closest('button[data-sort]');
+        if(!btn) return;
+        const sortBy = btn.getAttribute('data-sort');
+        if(sortBy) setSort(sortBy);
+      });
 
       refs.tokenInput.addEventListener('input',()=>{ if(refs.rememberToken.checked) localStorage.setItem(TOKEN_STORAGE_KEY, refs.tokenInput.value.trim()); renderMeta(); });
       refs.rememberToken.addEventListener('change',()=>{
@@ -417,6 +663,7 @@
 
       refs.deleteExpiredBtn.addEventListener('click',()=>deleteAllExpiredRemote());
       refs.addLocalBtn.addEventListener('click',()=>addRemoteEntry());
+      refs.localTypeInput.addEventListener('change',()=>renderMeta());
       refs.localKeyInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); addRemoteEntry(); }});
       refs.localNoteInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); addRemoteEntry(); }});
 
@@ -431,8 +678,10 @@
         if(savedToken){ refs.tokenInput.value=savedToken; refs.rememberToken.checked=true; }
 
         state.notesMap=readNotes();
-        state.latestAddedKey = localStorage.getItem(LAST_ADDED_KEY_STORAGE_KEY) || "";
+        state.latestAddedKey = "";
+        refs.localTypeInput.value='timed';
         const now=new Date(); refs.localStartDateInput.value=`${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
+        refs.localStartTimeInput.value='00:00';
         rebuild(); render();
 
         loadLogs();
