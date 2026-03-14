@@ -56,6 +56,12 @@
     .th-sort.active{color:#e8f8ff}
     .th-sort .sort-ind{font-size:11px;line-height:1;color:#93bbcf;min-width:10px}
     .th-sort.active .sort-ind{color:#7fd9cc}
+    .extend-row td{padding:0 8px 12px}
+    .extend-panel{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px;border:1px solid #2b5668;border-radius:10px;background:#0e2f41}
+    .extend-title{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#c7e6f8}
+    .extend-quick,.extend-custom{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .extend-custom input,.extend-custom select{min-height:34px}
+    .row-actions{display:flex;gap:8px;flex-wrap:wrap}
     .mono{font-family:Consolas,monospace}
     .note{max-width:260px;word-break:break-word}
     .status{display:inline-flex;border-radius:999px;padding:3px 9px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;border:1px solid transparent}
@@ -224,7 +230,7 @@
         try{ localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify({ sortBy: state.sortBy, sortDir: state.sortDir })); }catch{}
       }
       const initialSort = readSortPrefs();
-      const state = { rows: [], remoteRows: [], notesMap: {}, latestAddedKey: "", query: "", status: "all", sortBy: initialSort.sortBy, sortDir: initialSort.sortDir, fetchedAt: null, loading: false, saving: false, noticeText: "", noticeType: "info" };
+      const state = { rows: [], remoteRows: [], notesMap: {}, latestAddedKey: "", extendKey: "", query: "", status: "all", sortBy: initialSort.sortBy, sortDir: initialSort.sortDir, fetchedAt: null, loading: false, saving: false, noticeText: "", noticeType: "info" };
 
       const refs = {
         rows: document.getElementById("rows"), search: document.getElementById("searchInput"), filter: document.getElementById("statusFilter"), refresh: document.getElementById("refreshBtn"),
@@ -281,6 +287,46 @@
       function readNotes(){ try{ const v=localStorage.getItem(LOCAL_NOTES_STORAGE_KEY); if(!v) return {}; const obj=JSON.parse(v); return obj&&typeof obj==="object"&&!Array.isArray(obj)?obj:{}; }catch{ return {}; } }
       function writeNotes(obj){ localStorage.setItem(LOCAL_NOTES_STORAGE_KEY, JSON.stringify(obj)); }
       function setLatestAddedKey(key){ state.latestAddedKey = key || ""; }
+      function addMsFromUnit(amount, unit){
+        const a = Number(amount);
+        if(!Number.isInteger(a) || a < 1) throw new Error('Срок продления должен быть целым числом больше 0');
+        if(unit === "h") return a * 3600000;
+        if(unit === "d") return a * 86400000;
+        throw new Error('Неверная единица продления');
+      }
+      function getKzParts(d){
+        const kz = new Date(d.getTime() + (KZ_OFFSET_MINUTES * 60000));
+        return { day: kz.getUTCDate(), month: kz.getUTCMonth() + 1, year: kz.getUTCFullYear(), hour: kz.getUTCHours(), minute: kz.getUTCMinutes() };
+      }
+      function buildExtendedRaw(currentValue, addAmount, addUnit){
+        const parsed = parseSub(currentValue);
+        if(parsed.type !== "timed") throw new Error('Продление доступно только для ограниченных подписок');
+        if(!parsed.startDate || !parsed.endDate) throw new Error('Невозможно прочитать даты подписки');
+
+        const extraMs = addMsFromUnit(addAmount, addUnit);
+        const now = Date.now();
+        const baseEnd = parsed.endDate.getTime();
+        const effectiveEnd = Math.max(baseEnd, now);
+        const baseStart = parsed.isActive ? parsed.startDate.getTime() : now;
+        const newEndMs = effectiveEnd + extraMs;
+        const totalMinutes = Math.round((newEndMs - baseStart) / 60000);
+        if(totalMinutes < 1) throw new Error('Некорректная длительность продления');
+        if(totalMinutes % 60 !== 0) throw new Error('Продление должно быть кратно часу');
+
+        const totalHours = totalMinutes / 60;
+        const useDays = totalHours % 24 === 0;
+        const amount = useDays ? (totalHours / 24) : totalHours;
+        const unit = useDays ? "d" : "h";
+
+        const startDate = new Date(baseStart);
+        const p = getKzParts(startDate);
+        const hasTime = unit === "h" || parsed.showTime || p.hour !== 0 || p.minute !== 0;
+        let raw = `${amount}${unit}.${p.day}.${p.month}.${p.year}`;
+        if(hasTime){
+          raw += ` - ${pad2(p.hour)}:${pad2(p.minute)}`;
+        }
+        return raw;
+      }
       function txtCmp(a,b){ return String(a||"").localeCompare(String(b||""),"ru",{sensitivity:"base"}); }
       function numCmp(a,b){ return a===b ? 0 : (a<b ? -1 : 1); }
       function fallbackSort(a,b){
@@ -323,9 +369,11 @@
         const now = Date.now();
         const dir = state.sortDir==="desc" ? -1 : 1;
         return rows.slice().sort((a,b)=>{
-          const aTop = state.latestAddedKey && a.key === state.latestAddedKey;
-          const bTop = state.latestAddedKey && b.key === state.latestAddedKey;
-          if(aTop !== bTop) return aTop ? -1 : 1;
+          if(state.sortBy==="default"){
+            const aTop = state.latestAddedKey && a.key === state.latestAddedKey;
+            const bTop = state.latestAddedKey && b.key === state.latestAddedKey;
+            if(aTop !== bTop) return aTop ? -1 : 1;
+          }
           const cmp = compareBySelectedSort(a,b,now);
           if(cmp!==0) return cmp * dir;
           return fallbackSort(a,b);
@@ -370,7 +418,39 @@
       }
 
       function rowBtn(r){
-        return `<button class="btn-ghost" type="button" title="Удалить" aria-label="Удалить" data-action="delete-remote" data-delete-key="${encodeURIComponent(r.key)}">Удалить</button>`;
+        const keyEnc = encodeURIComponent(r.key);
+        const canExtend = r.type === "timed";
+        const extendBtn = canExtend
+          ? `<button class="btn-secondary" type="button" data-action="extend-open" data-key="${keyEnc}">Продлить</button>`
+          : `<button class="btn-secondary" type="button" disabled title="Продление доступно только для ограниченных подписок">Продлить</button>`;
+        const delBtn = `<button class="btn-ghost" type="button" title="Удалить" aria-label="Удалить" data-action="delete-remote" data-delete-key="${keyEnc}">Удалить</button>`;
+        return `<div class="row-actions">${extendBtn}${delBtn}</div>`;
+      }
+
+      function renderExtendRow(r){
+        if(state.extendKey !== r.key || r.type !== "timed") return '';
+        const keyEnc = encodeURIComponent(r.key);
+        return `<tr class="extend-row">
+          <td colspan="8">
+            <div class="extend-panel" data-key="${keyEnc}">
+              <div class="extend-title">Продление</div>
+              <div class="extend-quick">
+                <button class="btn-ghost" type="button" data-action="extend-quick" data-key="${keyEnc}" data-add="1" data-unit="d">+1д</button>
+                <button class="btn-ghost" type="button" data-action="extend-quick" data-key="${keyEnc}" data-add="7" data-unit="d">+7д</button>
+                <button class="btn-ghost" type="button" data-action="extend-quick" data-key="${keyEnc}" data-add="30" data-unit="d">+30д</button>
+              </div>
+              <div class="extend-custom">
+                <input class="extend-amount" type="number" min="1" step="1" value="7" aria-label="Срок продления">
+                <select class="extend-unit" aria-label="Единица продления">
+                  <option value="d">дни</option>
+                  <option value="h">часы</option>
+                </select>
+                <button class="btn-secondary" type="button" data-action="extend-apply" data-key="${keyEnc}">Применить</button>
+                <button class="btn-ghost" type="button" data-action="extend-cancel">Закрыть</button>
+              </div>
+            </div>
+          </td>
+        </tr>`;
       }
 
       function renderRows(){
@@ -385,7 +465,7 @@
           <td><span class="status ${r.statusClass}">${esc(r.statusLabel)}</span></td>
           <td class="note">${r.note?esc(r.note):"—"}</td>
           <td>${rowBtn(r)}</td>
-        </tr>`).join('');
+        </tr>${renderExtendRow(r)}`).join('');
       }
 
       function renderNotice(){
@@ -571,7 +651,7 @@
       function isShaConflictError(err){
         return Boolean(err && (err.status===409 || /HTTP 409/.test(String(err.message||''))));
       }
-      async function mutateRemoteJson(mutator,commitMsgFactory,emptyMsg){
+      async function mutateRemoteJson(mutator,commitMsgFactory,emptyMsg,successMsgFactory){
         if(state.loading||state.saving) return;
         let token;
         try{ token=getToken(); }catch(err){ setNotice('error',err.message); render(); return null; }
@@ -581,13 +661,18 @@
             const remoteFile=await fetchRepoJson(token);
             const result=mutator(remoteFile.data)||{};
             const removed=Number(result.removedCount)||0;
-            if(removed<1){ setNotice('info',emptyMsg||'Изменений для удаления не найдено.'); return null; }
-            const msg=typeof commitMsgFactory==='function'?commitMsgFactory(removed):String(commitMsgFactory||'chore: update allowedkeys');
+            const changed=Number(result.changedCount)||0;
+            const count = changed > 0 ? changed : removed;
+            if(count<1){ setNotice('info',emptyMsg||'Изменений для удаления не найдено.'); return null; }
+            const msg=typeof commitMsgFactory==='function'?commitMsgFactory(count):String(commitMsgFactory||'chore: update allowedkeys');
             try{
               const save=await updateRepoJson(token,remoteFile.sha,remoteFile.data,msg);
               state.remoteRows=mapRemoteRows(remoteFile.data); rebuild(); state.fetchedAt=new Date();
               const sha=save&&save.commit&&save.commit.sha?save.commit.sha.slice(0,7):'';
-              setNotice('success',sha?`Изменения сохранены в GitHub (commit ${sha}).`:'Изменения сохранены в GitHub.');
+              const okMsg = typeof successMsgFactory==='function'
+                ? successMsgFactory(result, sha)
+                : (sha?`Изменения сохранены в GitHub (commit ${sha}).`:'Изменения сохранены в GitHub.');
+              setNotice('success', okMsg);
               return result;
             }catch(err){
               if(isShaConflictError(err) && attempt===0){ continue; }
@@ -597,6 +682,25 @@
           throw new Error('Конфликт версий файла (sha mismatch). Попробуйте снова.');
         }catch(err){ setNotice('error',`Не удалось записать изменения в GitHub: ${err.message}`); return null; }
         finally{ state.saving=false; render(); }
+      }
+
+      async function extendRemoteKey(key, amount, unit){
+        if(state.loading||state.saving) return;
+        const result = await mutateRemoteJson(
+          (data)=>{
+            if(!Object.prototype.hasOwnProperty.call(data,key)) return {changedCount:0};
+            const newRaw = buildExtendedRaw(data[key], amount, unit);
+            data[key] = newRaw;
+            return {changedCount:1, newRaw};
+          },
+          ()=>`chore: extend key ${key} by ${amount}${unit}`,
+          `Ключ ${key} не найден в GitHub файле.`,
+          (_res, sha)=> sha ? `Подписка ${key} продлена (commit ${sha}).` : `Подписка ${key} продлена.`
+        );
+        if(result){
+          state.extendKey = "";
+          render();
+        }
       }
 
       async function deleteAllExpiredRemote(){
@@ -670,7 +774,39 @@
       refs.rows.addEventListener('click',(e)=>{
         const btn=e.target.closest('button[data-action]'); if(!btn) return;
         const action=btn.getAttribute('data-action');
-        if(action==='delete-remote'){ const k=btn.getAttribute('data-delete-key'); if(k) deleteSingleRemoteKey(decodeURIComponent(k)); }
+        if(action==='delete-remote'){
+          const k=btn.getAttribute('data-delete-key'); if(k) deleteSingleRemoteKey(decodeURIComponent(k));
+          return;
+        }
+        if(action==='extend-open'){
+          const k=btn.getAttribute('data-key'); if(!k) return;
+          const key = decodeURIComponent(k);
+          state.extendKey = state.extendKey === key ? "" : key;
+          renderRows();
+          return;
+        }
+        if(action==='extend-cancel'){
+          state.extendKey = "";
+          renderRows();
+          return;
+        }
+        if(action==='extend-quick'){
+          const k=btn.getAttribute('data-key'); if(!k) return;
+          const amount = Number(btn.getAttribute('data-add'));
+          const unit = btn.getAttribute('data-unit');
+          extendRemoteKey(decodeURIComponent(k), amount, unit);
+          return;
+        }
+        if(action==='extend-apply'){
+          const k=btn.getAttribute('data-key'); if(!k) return;
+          const panel = btn.closest('.extend-panel');
+          const amountInput = panel ? panel.querySelector('.extend-amount') : null;
+          const unitSelect = panel ? panel.querySelector('.extend-unit') : null;
+          const amount = amountInput ? Number(amountInput.value) : NaN;
+          const unit = unitSelect ? unitSelect.value : '';
+          extendRemoteKey(decodeURIComponent(k), amount, unit);
+          return;
+        }
       });
 
       (function init(){
