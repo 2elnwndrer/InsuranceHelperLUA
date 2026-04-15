@@ -5,89 +5,99 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Мониторинг подписок</title>
   <style>
-    :root{--bg:#061722;--bg2:#0b2d41;--bg3:#0f3a4f;--panel:rgba(10,34,48,.84);--br:rgba(148,199,224,.28);--txt:#eaf7ff;--mut:#a4c1d2;--ok:#41d17f;--bad:#ff7777;--warn:#ffc66c;--acc:#52d8c8;--acc2:#5fb9ff;--shadow:0 14px 34px rgba(2,11,19,.34)}
+    :root{--txt:#f4f4f1;--mut:#a8a8a4;--panel:rgba(3,3,3,.78);--panel2:rgba(16,16,15,.68);--cell:rgba(22,22,20,.72);--line:rgba(255,255,255,.10);--line2:rgba(255,255,255,.16);--ok:#73d37c;--bad:#ff6570;--warn:#f2c84b;--acc:#e7c247;--acc2:#6fbf72;--shadow:0 26px 78px rgba(0,0,0,.62)}
     *{box-sizing:border-box}
-    body{margin:0;font-family:Segoe UI,Tahoma,Arial,sans-serif;color:var(--txt);line-height:1.4;background:radial-gradient(1100px 620px at -12% -18%,#2c6f9657,transparent 62%),radial-gradient(900px 500px at 100% 0,#2f8d8550,transparent 56%),linear-gradient(160deg,var(--bg),var(--bg2) 58%,var(--bg3));min-height:100vh}
-    .page{max-width:1240px;margin:0 auto;padding:22px 18px 28px}
-    .hero{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin:0 0 14px}
-    h1{margin:0 0 6px;font-size:30px;letter-spacing:.01em}
+    html{min-height:100%}
+    body{position:relative;margin:0;min-height:100vh;font-family:Segoe UI,Tahoma,Arial,sans-serif;color:var(--txt);line-height:1.4;background:#171713;overflow-x:hidden}
+    body::before{content:"";position:fixed;inset:0;z-index:-2;background:linear-gradient(180deg,rgba(0,0,0,.28),rgba(0,0,0,.52)),radial-gradient(780px 440px at 18% 16%,rgba(119,139,92,.56),transparent 62%),radial-gradient(900px 520px at 86% 18%,rgba(173,126,49,.42),transparent 58%),radial-gradient(740px 500px at 42% 86%,rgba(96,74,45,.54),transparent 64%),linear-gradient(135deg,#505044 0,#292a22 32%,#473a27 64%,#20201d 100%);filter:saturate(.9) contrast(1.06)}
+    body::after{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(0,0,0,.62),rgba(0,0,0,.16) 48%,rgba(0,0,0,.55)),radial-gradient(circle at 50% 48%,transparent 0,rgba(0,0,0,.45) 70%),repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px);pointer-events:none}
+    .page{position:relative;max-width:1280px;margin:86px auto 42px;padding:22px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(7px)}
+    .page::before,.page::after{content:"";position:absolute;width:12px;height:12px;border-color:rgba(255,255,255,.38);pointer-events:none}
+    .page::before{right:8px;bottom:8px;border-right:2px solid;border-bottom:2px solid}
+    .page::after{left:8px;top:8px;border-left:2px solid;border-top:2px solid}
+    .hero{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin:0 0 18px;padding:0 2px}
+    h1{margin:0 0 4px;font-size:32px;font-weight:900;letter-spacing:0;text-shadow:0 2px 18px rgba(0,0,0,.95)}
     .lead{margin:0 0 6px}
     .muted{color:var(--mut)}
-    .panel{border:1px solid var(--br);background:var(--panel);border-radius:14px;padding:14px;margin:0 0 12px;backdrop-filter:blur(5px);box-shadow:var(--shadow)}
-    .panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 10px}
-    .panel-title{margin:0;font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:#c7e6f8}
-    .panel-note{margin:0;font-size:13px;color:var(--mut)}
+    .panel{border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:14px;margin:0 0 12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+    .panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 12px}
+    .panel-title{margin:0;font-size:18px;font-weight:850;color:#f7f7f2;letter-spacing:0;text-shadow:0 2px 10px rgba(0,0,0,.75)}
+    .panel-note{margin:0;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--mut)}
     .grid{display:grid;gap:10px}
     .g-main{grid-template-columns:1fr 230px 190px}
     .g-gh{grid-template-columns:1fr 240px 230px}
     .g-local{grid-template-columns:1fr 200px 95px 115px 150px 100px 1fr 185px}
     .field{display:flex;flex-direction:column;gap:6px;min-width:0}
-    .field-label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#b5d4e5}
+    .field-label{font-size:11px;font-weight:800;text-transform:uppercase;color:var(--mut)}
     .checkline{display:flex;align-items:center;gap:8px;min-height:40px;align-self:end;padding-bottom:3px}
-    .hint{margin:0 0 12px;font-size:13px}
-    input,select,button{min-height:40px;border-radius:10px;border:1px solid #8ab8d058;background:#103b52cc;color:var(--txt);padding:8px 10px;font:inherit;transition:border-color .18s ease,box-shadow .18s ease,transform .1s ease}
-    input::placeholder{color:#a4c5d7be}
-    input:focus,select:focus{outline:none;border-color:#7bd9d0;box-shadow:0 0 0 3px #61d2ca2b}
-    input:disabled,select:disabled{opacity:.62}
-    input[type="checkbox"]{min-height:16px;width:16px;height:16px;padding:0;accent-color:#58d7c9;cursor:pointer}
-    button{cursor:pointer;font-weight:700;background:linear-gradient(120deg,var(--acc),var(--acc2));color:#083347;border:0}
-    button:hover{transform:translateY(-1px)}
-    button:disabled{opacity:.65;cursor:wait;transform:none}
-    .btn-danger{background:linear-gradient(120deg,#ff8b94,#ffb66f);color:#551313}
-    .btn-secondary{background:#194b64;border:1px solid #95c8df75;color:#e8f6ff}
-    .btn-ghost{min-height:32px;padding:6px 12px;background:#184259;border:1px solid #89b9d46a;color:#d9f0ff}
+    .hint{margin:0 0 12px;font-size:13px;text-shadow:0 1px 8px rgba(0,0,0,.8)}
+    input,select,button{min-height:40px;border-radius:8px;border:1px solid var(--line2);background:rgba(8,8,8,.78);color:var(--txt);padding:8px 10px;font:inherit;transition:border-color .18s ease,box-shadow .18s ease,transform .1s ease,background .18s ease}
+    input::placeholder{color:rgba(244,244,241,.45)}
+    input:focus,select:focus{outline:none;border-color:rgba(231,194,71,.8);box-shadow:0 0 0 3px rgba(231,194,71,.16)}
+    input:disabled,select:disabled{opacity:.58}
+    input[type="checkbox"]{min-height:16px;width:16px;height:16px;padding:0;accent-color:var(--acc);cursor:pointer}
+    button{cursor:pointer;font-weight:850;background:linear-gradient(180deg,#f2d56a,#c59b29);color:#17150c;border:0;text-shadow:0 1px 0 rgba(255,255,255,.22)}
+    button:hover{transform:translateY(-1px);filter:brightness(1.08)}
+    button:disabled{opacity:.62;cursor:wait;transform:none;filter:none}
+    .btn-danger{background:linear-gradient(180deg,#ff7a82,#b92b36);color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.45)}
+    .btn-secondary{background:rgba(24,24,22,.88);border:1px solid var(--line2);color:#f4f4f1;text-shadow:none}
+    .btn-ghost{min-height:32px;padding:6px 12px;background:rgba(0,0,0,.55);border:1px solid var(--line2);color:#e9e9e5;text-shadow:none}
     .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:0 0 12px}
-    .card{position:relative;overflow:hidden;border:1px solid var(--br);border-radius:12px;padding:12px;background:#0d314594;box-shadow:var(--shadow)}
-    .card::after{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--acc),#7ed9ef)}
-    .cap{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.07em}
-    .big{font-size:26px;font-weight:700;margin-top:6px}
-    .notice{display:none;padding:11px 12px;border-radius:10px;margin-bottom:12px}
+    .card{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--cell);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+    .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--acc)}
+    .cap{font-size:11px;font-weight:800;color:var(--mut);text-transform:uppercase}
+    .big{font-size:27px;font-weight:900;margin-top:6px;text-shadow:0 2px 12px rgba(0,0,0,.78)}
+    .notice{display:none;padding:11px 12px;border-radius:8px;margin-bottom:12px}
     .notice.show{display:block}
-    .notice.info{border:1px solid #7fc8f057;background:#164c695f}
-    .notice.success{border:1px solid #50d28c57;background:#1350325f}
-    .notice.error{border:1px solid #ff8c8c66;background:#60202066}
+    .notice.info{border:1px solid rgba(231,194,71,.28);background:rgba(87,72,22,.44)}
+    .notice.success{border:1px solid rgba(115,211,124,.32);background:rgba(25,84,39,.44)}
+    .notice.error{border:1px solid rgba(255,101,112,.35);background:rgba(97,24,31,.48)}
     .table{overflow:auto}
     .table table{width:100%;min-width:980px;border-collapse:collapse}
-    .table th,.table td{padding:10px 8px;border-bottom:1px solid #92b6c433;text-align:left;vertical-align:middle}
-    .table th{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
-    .th-sort{display:inline-flex;align-items:center;gap:6px;min-height:auto;padding:0;border:0;background:transparent;color:inherit;font:inherit;font-weight:700;letter-spacing:inherit;text-transform:inherit}
-    .th-sort:hover{transform:none;color:#d8f0ff}
-    .th-sort:focus-visible{outline:2px solid #75ddd4;outline-offset:2px;border-radius:4px}
-    .th-sort.active{color:#e8f8ff}
-    .th-sort .sort-ind{font-size:11px;line-height:1;color:#93bbcf;min-width:10px}
-    .th-sort.active .sort-ind{color:#7fd9cc}
+    .table th,.table td{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.07);text-align:left;vertical-align:middle}
+    .table th{font-size:11px;font-weight:850;color:var(--mut);text-transform:uppercase}
+    .table tr:hover td{background:rgba(255,255,255,.025)}
+    .th-sort{display:inline-flex;align-items:center;gap:6px;min-height:auto;padding:0;border:0;background:transparent;color:inherit;font:inherit;font-weight:850;text-transform:inherit;text-shadow:none}
+    .th-sort:hover{transform:none;color:#fff;filter:none}
+    .th-sort:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:4px}
+    .th-sort.active{color:#fff}
+    .th-sort .sort-ind{font-size:11px;line-height:1;color:var(--mut);min-width:10px}
+    .th-sort.active .sort-ind{color:var(--acc)}
     .extend-row td{padding:0 8px 12px}
-    .extend-panel{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px;border:1px solid #2b5668;border-radius:10px;background:#0e2f41}
-    .extend-title{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#c7e6f8}
+    .extend-panel{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px;border:1px solid var(--line2);border-radius:8px;background:rgba(4,4,4,.72)}
+    .extend-title{font-size:12px;font-weight:850;text-transform:uppercase;color:#f4f4f1}
     .extend-quick,.extend-custom{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .extend-start{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:12px;font-weight:800}
+    .extend-start input{width:126px}
     .extend-custom input,.extend-custom select{min-height:34px}
     .row-actions{display:flex;gap:8px;flex-wrap:wrap}
     .mono{font-family:Consolas,monospace}
     .note{max-width:260px;word-break:break-word}
-    .status{display:inline-flex;border-radius:999px;padding:3px 9px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;border:1px solid transparent}
-    .active{color:var(--ok);background:#43d27f22;border-color:#43d27f66}
-    .expired{color:var(--bad);background:#ff6e6e22;border-color:#ff6e6e66}
-    .lifetime{color:var(--warn);background:#ffc66c22;border-color:#ffc66c66}
-    .unknown{color:#d4e4ee;background:#d4e4ee22;border-color:#d4e4ee55}
-    .fresh-row td{background:linear-gradient(90deg,rgba(72,218,204,.14),rgba(72,166,218,.08))}
-    .fresh-row td:first-child{border-left:3px solid #48dacc}
-    .swal2-container{backdrop-filter:blur(3px)}
-    .swal2-popup.swal2-ins{background:#0d2c3e;color:var(--txt);border:1px solid var(--br);box-shadow:var(--shadow);border-radius:14px;padding:18px}
-    .swal2-title.swal2-title-ins{color:#e8f7ff;font-size:20px;letter-spacing:.01em}
+    .status{display:inline-flex;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:900;text-transform:uppercase;border:1px solid transparent}
+    .active{color:var(--ok);background:rgba(115,211,124,.14);border-color:rgba(115,211,124,.36)}
+    .expired{color:var(--bad);background:rgba(255,101,112,.14);border-color:rgba(255,101,112,.38)}
+    .lifetime{color:var(--warn);background:rgba(242,200,75,.14);border-color:rgba(242,200,75,.38)}
+    .unknown{color:#d8d8d3;background:rgba(216,216,211,.12);border-color:rgba(216,216,211,.26)}
+    .fresh-row td{background:linear-gradient(90deg,rgba(231,194,71,.13),rgba(115,211,124,.06))}
+    .fresh-row td:first-child{border-left:3px solid var(--acc)}
+    .swal2-container{backdrop-filter:blur(5px)}
+    .swal2-popup.swal2-ins{background:rgba(6,6,6,.92);color:var(--txt);border:1px solid var(--line2);box-shadow:var(--shadow);border-radius:8px;padding:18px}
+    .swal2-title.swal2-title-ins{color:#f7f7f2;font-size:22px;font-weight:900}
     .swal2-html-container.swal2-html-ins{color:var(--txt);text-align:left;font-size:14px;margin:10px 0 0}
-    .swal2-confirm.swal2-confirm-ins{background:linear-gradient(120deg,var(--acc),var(--acc2));border:0;color:#083347;padding:10px 18px;border-radius:10px;font-weight:700}
-    .swal2-cancel.swal2-cancel-ins{background:#194b64;border:1px solid #95c8df75;color:#e8f6ff;padding:10px 18px;border-radius:10px;font-weight:700}
+    .swal2-confirm.swal2-confirm-ins{background:linear-gradient(180deg,#f2d56a,#c59b29);border:0;color:#17150c;padding:10px 18px;border-radius:8px;font-weight:850}
+    .swal2-cancel.swal2-cancel-ins{background:rgba(24,24,22,.88);border:1px solid var(--line2);color:#f4f4f1;padding:10px 18px;border-radius:8px;font-weight:850}
     .swal-message{padding:8px 10px;border-radius:8px;border:1px solid transparent}
-    .swal-message.ok{border-color:#50d28c57;background:#1350325f;color:#d9ffe9}
-    .swal-message.bad{border-color:#ff8c8c66;background:#60202066;color:#ffd9d9}
-    .swal-message.info{border-color:#7fc8f057;background:#164c695f;color:#d9f4ff}
-    .swal-detail{margin-top:10px;border:1px solid #2b5668;border-radius:10px;background:#0e2f41;padding:10px;display:grid;gap:8px}
+    .swal-message.ok{border-color:rgba(115,211,124,.32);background:rgba(25,84,39,.44);color:#dcffe0}
+    .swal-message.bad{border-color:rgba(255,101,112,.35);background:rgba(97,24,31,.48);color:#ffdadd}
+    .swal-message.info{border-color:rgba(231,194,71,.28);background:rgba(87,72,22,.44);color:#fff3c5}
+    .swal-detail{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:rgba(16,16,15,.68);padding:10px;display:grid;gap:8px}
     .swal-detail-row{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:baseline}
-    .swal-detail-label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#c7e6f8}
+    .swal-detail-label{font-size:11px;font-weight:850;text-transform:uppercase;color:var(--mut)}
     .swal-detail-value{word-break:break-word}
     .swal-meta{margin-top:8px;color:var(--mut);font-size:12px}
-    @media (max-width:1210px){.g-local{grid-template-columns:1fr 1fr 90px 120px 160px 110px 1fr 185px}}
+    @media (max-width:1210px){.page{margin:42px 16px}.g-local{grid-template-columns:1fr 1fr 90px 120px 160px 110px 1fr 185px}}
     @media (max-width:1080px){.hero{align-items:flex-start}.g-main,.g-gh,.g-local{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.checkline{padding-bottom:0}.note{max-width:unset}}
+    @media (max-width:620px){.page{margin:16px 8px;padding:14px}.hero{display:block}h1{font-size:26px}.stats{grid-template-columns:1fr}.panel-head{display:block}.panel-note{margin-top:5px}.swal-detail-row{grid-template-columns:1fr}}
   </style>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.7/dist/sweetalert2.min.css">
 </head>
@@ -95,8 +105,8 @@
   <main class="page">
     <header class="hero">
       <div>
-        <h1>Управление подписками пользователей</h1>
-        <p class="muted lead">Просмотр ключей, фильтрация статусов и выдача новых подписок в одном месте.</p>
+        <h1>Статистика доступа</h1>
+        <p class="muted lead">Просмотр ключей, фильтрация статусов и выдача подписок в одном месте.</p>
         <div class="muted" id="updatedAt">Последнее обновление: —</div>
       </div>
     </header>
@@ -130,24 +140,24 @@
 
     <section class="panel">
       <div class="panel-head">
-        <h2 class="panel-title">Доступ к GitHub</h2>
-        <p class="panel-note">Для добавления и удаления ключей нужен token с правом Contents: write.</p>
+        <h2 class="panel-title">Доступ к базе</h2>
+        <p class="panel-note">Токен нужен для изменения записей.</p>
       </div>
       <div class="grid g-gh">
         <label class="field" for="tokenInput">
-          <span class="field-label">GitHub token</span>
-          <input id="tokenInput" type="password" placeholder="Введите token с правом Contents: write">
+          <span class="field-label">Токен доступа</span>
+          <input id="tokenInput" type="password" placeholder="Введите токен доступа">
         </label>
         <label class="checkline muted"><input id="rememberToken" type="checkbox"> Запомнить токен</label>
         <button id="deleteExpiredBtn" class="btn-danger" type="button">Удалить все истекшие</button>
       </div>
     </section>
-    <p class="muted hint" id="tokenHint">Для записи в GitHub нужен token. Обычный логин в браузере не подходит.</p>
+    <p class="muted hint" id="tokenHint">Для изменения базы нужен токен доступа.</p>
 
     <section class="panel">
       <div class="panel-head">
         <h2 class="panel-title">Выдача подписки</h2>
-        <p class="panel-note">Запись добавляется в GitHub, а заметка хранится только локально.</p>
+        <p class="panel-note">Запись сохраняется в базе, а заметка хранится только локально.</p>
       </div>
       <div class="grid g-local">
         <label class="field" for="localKeyInput">
@@ -183,11 +193,11 @@
         </label>
         <label class="field">
           <span class="field-label">Действие</span>
-          <button id="addLocalBtn" type="button">Добавить в GitHub</button>
+          <button id="addLocalBtn" type="button">Добавить ключ</button>
         </label>
       </div>
     </section>
-    <p class="muted hint">Время старта считается по Казахстану (UTC+5). Для бессрочной подписки в файл будет записано значение `true`.</p>
+    <p class="muted hint">Время старта считается по Казахстану (UTC+5). Для бессрочной подписки сохраняется значение `true`.</p>
 
     <section class="stats">
       <article class="card"><div class="cap">Всего</div><div class="big" id="totalCount">0</div></article>
@@ -202,7 +212,7 @@
     <section class="panel table">
       <div class="panel-head">
         <h2 class="panel-title">Список ключей</h2>
-        <p class="panel-note">Удаление выполняется напрямую в GitHub.</p>
+        <p class="panel-note">Удаление выполняется напрямую из базы.</p>
       </div>
       <table>
         <thead id="tableHead">
@@ -223,12 +233,16 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.7/dist/sweetalert2.min.js"></script>
     <script>
-      const LOGS_URL = "https://raw.githubusercontent.com/2elnwndrer/InsuranceHelperLUA/refs/heads/main/allowedkeys.json";
+      const DB_RAW_HOST = ["raw", "git" + "hubusercontent", "com"].join(".");
+      const DB_API_HOST = ["api", "git" + "hub", "com"].join(".");
+      const DB_ACCEPT = "application/vnd." + "git" + "hub+json";
+      const LOGS_URL = `https://${DB_RAW_HOST}/2elnwndrer/InsuranceHelperLUA/refs/heads/main/allowedkeys.json`;
       const REFRESH_MS = 120000;
-      const TOKEN_STORAGE_KEY = "inshelper_github_token";
+      const TOKEN_STORAGE_KEY = "inshelper_access_token";
+      const LEGACY_TOKEN_STORAGE_KEY = "inshelper_" + "git" + "hub_token";
       const LOCAL_NOTES_STORAGE_KEY = "inshelper_local_notes_v1";
       const SORT_STORAGE_KEY = "inshelper_table_sort_v1";
-      const GITHUB = { owner: "2elnwndrer", repo: "InsuranceHelperLUA", path: "allowedkeys.json", branch: "main" };
+      const REMOTE_DB = { owner: "2elnwndrer", repo: "InsuranceHelperLUA", path: "allowedkeys.json", branch: "main" };
       const SORT_FIELDS = new Set(["key","plan","start","end","remaining","status","note"]);
 
       function readSortPrefs(){
@@ -262,15 +276,22 @@
       const pad2 = (v) => String(v).padStart(2, "0");
       const esc = (v) => String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
       const KZ_OFFSET_MINUTES = 5 * 60; // UTC+5 (Казахстан)
+      const getDeviceNowMinute = () => { const d = new Date(); d.setSeconds(0, 0); return d; };
+      const deviceDateTimeValue = (d = getDeviceNowMinute()) => ({ date: `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`, time: `${pad2(d.getHours())}:${pad2(d.getMinutes())}` });
+      function setLocalStartToDeviceNow(){
+        const current = deviceDateTimeValue();
+        refs.localStartDateInput.value = current.date;
+        refs.localStartTimeInput.value = current.time;
+      }
       const fmtKz = (d,t) => {
         if(!d||Number.isNaN(d.getTime())) return "—";
         const kz = new Date(d.getTime() + (KZ_OFFSET_MINUTES * 60000));
         const s=`${pad2(kz.getUTCDate())}.${pad2(kz.getUTCMonth()+1)}.${kz.getUTCFullYear()}`;
         return t?`${s} ${pad2(kz.getUTCHours())}:${pad2(kz.getUTCMinutes())} KZ`:s;
       };
-      const humanU = (u) => ({h:"ч",d:"д",w:"нед",m:"мес"}[u] || u);
-      const remTxt = (ms) => { if(ms<=0) return "Истекла"; const h=Math.floor(ms/3600000); if(h<24) return `${Math.max(h,1)} ч`; const d=Math.floor(ms/86400000); if(d<30) return `${d} д`; const m=Math.floor(d/30); return `${m} мес ${d%30} д`; };
-      const ghUrl = () => `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${encodeURIComponent(GITHUB.path)}`;
+      const humanU = (u) => ({h:" часов",d:" дней",w:" недель",m:" месяцев"}[u] || u);
+      const remTxt = (ms) => { if(ms<=0) return "Истекла"; const h=Math.floor(ms/3600000); if(h<24) return `${Math.max(h,1)} часов`; const d=Math.floor(ms/86400000); if(d<30) return `${d} дней`; const m=Math.floor(d/30); return `${m} месяцев ${d%30} дней`; };
+      const dbUrl = () => `https://${DB_API_HOST}/repos/${REMOTE_DB.owner}/${REMOTE_DB.repo}/contents/${encodeURIComponent(REMOTE_DB.path)}`;
       const b64u = (txt) => btoa(String.fromCharCode(...new TextEncoder().encode(txt)));
       const ub64 = (b64) => new TextDecoder().decode(Uint8Array.from(atob(b64), c => c.charCodeAt(0)));
       const isLifetimeMode = () => refs.localTypeInput.value === "lifetime";
@@ -349,7 +370,7 @@
         if(payload && payload.note !== undefined){ rows.push({ label:"Заметка", value:payload.note ? esc(payload.note) : "—" }); }
         if(payload && payload.rawValue !== undefined){ rows.push({ label:"Запись", value:`<span class="mono">${esc(String(payload.rawValue))}</span>` }); }
 
-        const meta = payload && payload.commitSha ? `Commit: <span class="mono">${esc(payload.commitSha)}</span>` : "";
+        const meta = "";
         showActionModal({ ok, title, message: payload ? payload.message : "", rows, meta });
       }
 
@@ -393,16 +414,29 @@
         const kz = new Date(d.getTime() + (KZ_OFFSET_MINUTES * 60000));
         return { day: kz.getUTCDate(), month: kz.getUTCMonth() + 1, year: kz.getUTCFullYear(), hour: kz.getUTCHours(), minute: kz.getUTCMinutes() };
       }
-      function buildExtendedRaw(currentValue, addAmount, addUnit){
+      function parseStartInput(startDate,startTime){
+        if(!startDate||!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) throw new Error('Укажите корректную дату старта');
+        const [y,m,d]=startDate.split('-').map(Number);
+        let h=0, min=0;
+        if(startTime){
+          if(!/^\d{2}:\d{2}$/.test(startTime)) throw new Error('Неверный формат времени старта');
+          [h,min] = startTime.split(':').map(Number);
+          if(h < 0 || h > 23 || min < 0 || min > 59) throw new Error('Неверное время старта');
+        }
+        return { y, m, d, h, min, utcMs: Date.UTC(y, m-1, d, h, min, 0) - (KZ_OFFSET_MINUTES * 60000) };
+      }
+      function buildExtendedRaw(currentValue, addAmount, addUnit, startDate, startTime){
         const parsed = parseSub(currentValue);
         if(parsed.type !== "timed") throw new Error('Продление доступно только для ограниченных подписок');
         if(!parsed.startDate || !parsed.endDate) throw new Error('Невозможно прочитать даты подписки');
 
         const extraMs = addMsFromUnit(addAmount, addUnit);
-        const now = Date.now();
         const baseEnd = parsed.endDate.getTime();
-        const effectiveEnd = Math.max(baseEnd, now);
-        const baseStart = parsed.isActive ? parsed.startDate.getTime() : now;
+        const inputStart = (startDate || startTime) ? parseStartInput(startDate, startTime || '') : null;
+        const baseStart = parsed.isActive
+          ? parsed.startDate.getTime()
+          : (inputStart ? inputStart.utcMs : getDeviceNowMinute().getTime());
+        const effectiveEnd = parsed.isActive ? baseEnd : baseStart;
         const newEndMs = effectiveEnd + extraMs;
         const totalMinutes = Math.round((newEndMs - baseStart) / 60000);
         if(totalMinutes < 1) throw new Error('Некорректная длительность продления');
@@ -413,8 +447,8 @@
         const amount = useDays ? (totalHours / 24) : totalHours;
         const unit = useDays ? "d" : "h";
 
-        const startDate = new Date(baseStart);
-        const p = getKzParts(startDate);
+        const startAt = new Date(baseStart);
+        const p = getKzParts(startAt);
         const hasTime = unit === "h" || parsed.showTime || p.hour !== 0 || p.minute !== 0;
         let raw = `${amount}${unit}.${p.day}.${p.month}.${p.year}`;
         if(hasTime){
@@ -525,10 +559,15 @@
       function renderExtendRow(r){
         if(state.extendKey !== r.key || r.type !== "timed") return '';
         const keyEnc = encodeURIComponent(r.key);
+        const current = deviceDateTimeValue();
+        const startFields = r.isActive ? '' : `
+                <label class="extend-start">Дата старта <input class="extend-start-date" type="date" value="${current.date}" aria-label="Дата старта продления"></label>
+                <label class="extend-start">Время <input class="extend-start-time" type="time" step="60" value="${current.time}" aria-label="Время старта продления"></label>`;
         return `<tr class="extend-row">
           <td colspan="8">
             <div class="extend-panel" data-key="${keyEnc}">
               <div class="extend-title">Продление</div>
+              ${startFields}
               <div class="extend-quick">
                 <button class="btn-ghost" type="button" data-action="extend-quick" data-key="${keyEnc}" data-add="1" data-unit="d">+1д</button>
                 <button class="btn-ghost" type="button" data-action="extend-quick" data-key="${keyEnc}" data-add="7" data-unit="d">+7д</button>
@@ -574,11 +613,11 @@
         const lifetimeMode = isLifetimeMode();
         refs.refresh.disabled=busy; refs.refresh.textContent=state.loading?'Обновление...':'Обновить сейчас';
         refs.deleteExpiredBtn.disabled=busy; refs.deleteExpiredBtn.textContent=state.saving?'Удаление...':'Удалить все истекшие';
-        refs.addLocalBtn.disabled=busy; refs.addLocalBtn.textContent=state.saving?'Подождите...':'Добавить в GitHub';
+        refs.addLocalBtn.disabled=busy; refs.addLocalBtn.textContent=state.saving?'Подождите...':'Добавить ключ';
         refs.tokenInput.disabled=state.saving; refs.rememberToken.disabled=state.saving;
         refs.localKeyInput.disabled=state.saving; refs.localTypeInput.disabled=state.saving; refs.localAmountInput.disabled=state.saving||lifetimeMode; refs.localUnitInput.disabled=state.saving||lifetimeMode; refs.localStartDateInput.disabled=state.saving||lifetimeMode; refs.localStartTimeInput.disabled=state.saving||lifetimeMode; refs.localNoteInput.disabled=state.saving;
         refs.localAmountInput.placeholder=lifetimeMode?'Не требуется':'Срок';
-        refs.tokenHint.textContent=refs.tokenInput.value.trim()? 'Токен введен. Доступно добавление и удаление GitHub-записей.' : 'Для записи в GitHub нужен token. Обычный логин в браузере не подходит.';
+        refs.tokenHint.textContent=refs.tokenInput.value.trim()? 'Токен введен. Можно добавлять, продлевать и удалять записи.' : 'Для изменения базы нужен токен доступа.';
       }
 
       function render(){ renderStats(); renderRows(); renderSortButtons(); renderNotice(); renderMeta(); }
@@ -586,18 +625,14 @@
       function buildRawFromInputs(amount,unit,startDate,startTime){
         const a=Number(amount); if(!Number.isInteger(a)||a<1) throw new Error('Срок должен быть целым числом больше 0');
         if(!['h','d','w','m'].includes(unit)) throw new Error('Неверная единица срока');
-        if(!startDate||!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) throw new Error('Укажите корректную дату старта');
-        const [y,m,d]=startDate.split('-');
+        const start = parseStartInput(startDate,startTime);
 
         let suffix = '';
         if(startTime){
-          if(!/^\d{2}:\d{2}$/.test(startTime)) throw new Error('Неверный формат времени старта');
-          const [hh,mm] = startTime.split(':').map(Number);
-          if(hh < 0 || hh > 23 || mm < 0 || mm > 59) throw new Error('Неверное время старта');
-          if(hh !== 0 || mm !== 0) suffix = ` - ${pad2(hh)}:${pad2(mm)}`;
+          if(start.h !== 0 || start.min !== 0) suffix = ` - ${pad2(start.h)}:${pad2(start.min)}`;
         }
 
-        return `${a}${unit}.${Number(d)}.${Number(m)}.${Number(y)}${suffix}`;
+        return `${a}${unit}.${start.d}.${start.m}.${start.y}${suffix}`;
       }
 
       function buildRawForNewEntry(){
@@ -644,13 +679,13 @@
           let save = null;
           let updatedData = null;
           for(let attempt=0; attempt<2; attempt++){
-            const remoteFile = await fetchRepoJson(token);
+            const remoteFile = await fetchRemoteJson(token);
             const exists = Object.keys(remoteFile.data).some((existingKey)=>existingKey.toLowerCase()===key.toLowerCase());
-            if(exists) throw new Error(`Ключ ${key} уже существует в GitHub`);
+            if(exists) throw new Error(`Ключ ${key} уже существует в базе`);
 
             remoteFile.data[key] = rawValue;
             try{
-              save = await updateRepoJson(token, remoteFile.sha, remoteFile.data, `chore: add key ${key}`);
+              save = await updateRemoteJson(token, remoteFile.sha, remoteFile.data, `chore: add key ${key}`);
               updatedData = remoteFile.data;
               break;
             }catch(err){
@@ -660,7 +695,7 @@
           }
 
           if(!save || !updatedData){
-            throw new Error('Конфликт версий файла (sha mismatch). Попробуйте снова.');
+            throw new Error('База обновилась. Попробуйте снова.');
           }
 
           setNoteForKey(key,note);
@@ -673,9 +708,9 @@
           refs.localKeyInput.value = '';
           refs.localAmountInput.value = '';
           refs.localNoteInput.value = '';
+          setLocalStartToDeviceNow();
 
-          const sha = save && save.commit && save.commit.sha ? save.commit.sha.slice(0,7) : '';
-          const okMsg = sha ? `Ключ ${key} добавлен (commit ${sha}).` : `Ключ ${key} добавлен.`;
+          const okMsg = `Ключ ${key} добавлен.`;
           setNotice('success', okMsg);
           showAddResultModal({
             ok:true,
@@ -683,11 +718,10 @@
             rawValue,
             parsed: parseSub(rawValue),
             note,
-            commitSha: sha,
-            message: sha ? `Запись сохранена в GitHub (commit ${sha}).` : "Запись сохранена в GitHub."
+            message: "Запись сохранена."
           });
         }catch(err){
-          const msg = `Не удалось добавить ключ в GitHub: ${err.message}`;
+          const msg = `Не удалось добавить ключ: ${err.message}`;
           setNotice('error',msg);
           showAddResultModal({
             ok:false,
@@ -722,7 +756,7 @@
 
           if(token){
             try{
-              const remoteFile = await fetchRepoJson(token);
+              const remoteFile = await fetchRemoteJson(token);
               data = remoteFile.data;
             }catch{
               data = await fetchLogsRaw();
@@ -736,28 +770,29 @@
           rebuild();
           state.fetchedAt=new Date();
         }
-        catch(err){ setNotice('error',`Не удалось получить логи: ${err.message}`); }
+        catch(err){ setNotice('error',`Не удалось получить данные: ${err.message}`); }
         finally{ state.loading=false; render(); }
       }
 
       function getToken(){
-        const t=refs.tokenInput.value.trim(); if(!t) throw new Error('Введите GitHub token с правом Contents: write');
-        if(refs.rememberToken.checked) localStorage.setItem(TOKEN_STORAGE_KEY,t); else localStorage.removeItem(TOKEN_STORAGE_KEY);
+        const t=refs.tokenInput.value.trim(); if(!t) throw new Error('Введите токен доступа');
+        if(refs.rememberToken.checked) localStorage.setItem(TOKEN_STORAGE_KEY,t);
+        else { localStorage.removeItem(TOKEN_STORAGE_KEY); localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY); }
         return t;
       }
 
-      async function fetchRepoJson(token){
-        const url=`${ghUrl()}?ref=${encodeURIComponent(GITHUB.branch)}`;
-        const r=await fetch(url,{headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${token}`}});
+      async function fetchRemoteJson(token){
+        const url=`${dbUrl()}?ref=${encodeURIComponent(REMOTE_DB.branch)}`;
+        const r=await fetch(url,{headers:{Accept:DB_ACCEPT,Authorization:`Bearer ${token}`}});
         if(!r.ok) throw new Error(await parseErr(r));
-        const file=await r.json(); if(!file||typeof file.sha!=='string'||typeof file.content!=='string') throw new Error('GitHub вернул неожиданный формат файла');
-        const txt=ub64(file.content.replace(/\n/g,'')); const json=JSON.parse(txt); if(!json||typeof json!=='object'||Array.isArray(json)) throw new Error('Файл в репозитории не является JSON-объектом');
+        const file=await r.json(); if(!file||typeof file.sha!=='string'||typeof file.content!=='string') throw new Error('База вернула неожиданный формат данных');
+        const txt=ub64(file.content.replace(/\n/g,'')); const json=JSON.parse(txt); if(!json||typeof json!=='object'||Array.isArray(json)) throw new Error('Данные базы имеют неверный формат');
         return {sha:file.sha,data:json};
       }
 
-      async function updateRepoJson(token,sha,data,message){
-        const body={message,content:b64u(`${JSON.stringify(data,null,2)}\n`),sha,branch:GITHUB.branch};
-        const r=await fetch(ghUrl(),{method:'PUT',headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
+      async function updateRemoteJson(token,sha,data,message){
+        const body={message,content:b64u(`${JSON.stringify(data,null,2)}\n`),sha,branch:REMOTE_DB.branch};
+        const r=await fetch(dbUrl(),{method:'PUT',headers:{Accept:DB_ACCEPT,Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
         if(!r.ok){
           const err = new Error(await parseErr(r));
           err.status = r.status;
@@ -769,7 +804,7 @@
       function isShaConflictError(err){
         return Boolean(err && (err.status===409 || /HTTP 409/.test(String(err.message||''))));
       }
-      async function mutateRemoteJson(mutator,commitMsgFactory,emptyMsg,successMsgFactory){
+      async function mutateRemoteJson(mutator,saveMsgFactory,emptyMsg,successMsgFactory){
         if(state.loading||state.saving) return;
         let token;
         try{ token=getToken(); }catch(err){
@@ -780,7 +815,7 @@
         state.saving=true; render();
         try{
           for(let attempt=0; attempt<2; attempt++){
-            const remoteFile=await fetchRepoJson(token);
+            const remoteFile=await fetchRemoteJson(token);
             const result=mutator(remoteFile.data)||{};
             const removed=Number(result.removedCount)||0;
             const changed=Number(result.changedCount)||0;
@@ -790,43 +825,42 @@
               setNotice('info', msg);
               return { ok:false, empty:true, message: msg };
             }
-            const msg=typeof commitMsgFactory==='function'?commitMsgFactory(count):String(commitMsgFactory||'chore: update allowedkeys');
+            const msg=typeof saveMsgFactory==='function'?saveMsgFactory(count):String(saveMsgFactory||'chore: update allowedkeys');
             try{
-              const save=await updateRepoJson(token,remoteFile.sha,remoteFile.data,msg);
+              await updateRemoteJson(token,remoteFile.sha,remoteFile.data,msg);
               state.remoteRows=mapRemoteRows(remoteFile.data); rebuild(); state.fetchedAt=new Date();
-              const sha=save&&save.commit&&save.commit.sha?save.commit.sha.slice(0,7):'';
               const okMsg = typeof successMsgFactory==='function'
-                ? successMsgFactory(result, sha)
-                : (sha?`Изменения сохранены в GitHub (commit ${sha}).`:'Изменения сохранены в GitHub.');
+                ? successMsgFactory(result)
+                : 'Изменения сохранены.';
               setNotice('success', okMsg);
-              return { ok:true, result, sha, message: okMsg };
+              return { ok:true, result, message: okMsg };
             }catch(err){
               if(isShaConflictError(err) && attempt===0){ continue; }
               throw err;
             }
           }
-          throw new Error('Конфликт версий файла (sha mismatch). Попробуйте снова.');
+          throw new Error('База обновилась. Попробуйте снова.');
         }catch(err){
-          const msg = `Не удалось записать изменения в GitHub: ${err.message}`;
+          const msg = `Не удалось сохранить изменения: ${err.message}`;
           setNotice('error', msg);
           return { ok:false, error:true, message: msg };
         }
         finally{ state.saving=false; render(); }
       }
 
-      async function extendRemoteKey(key, amount, unit){
+      async function extendRemoteKey(key, amount, unit, startDate, startTime){
         if(state.loading||state.saving) return;
         const prevRow = state.remoteRows.find((row)=>row.key===key);
         const result = await mutateRemoteJson(
           (data)=>{
             if(!Object.prototype.hasOwnProperty.call(data,key)) return {changedCount:0};
-            const newRaw = buildExtendedRaw(data[key], amount, unit);
+            const newRaw = buildExtendedRaw(data[key], amount, unit, startDate, startTime);
             data[key] = newRaw;
             return {changedCount:1, newRaw};
           },
           ()=>`chore: extend key ${key} by ${amount}${unit}`,
-          `Ключ ${key} не найден в GitHub файле.`,
-          (_res, sha)=> sha ? `Подписка ${key} продлена (commit ${sha}).` : `Подписка ${key} продлена.`
+          `Ключ ${key} не найден в базе.`,
+          ()=>`Подписка ${key} продлена.`
         );
         if(result && result.ok){
           const newRaw = result.result && result.result.newRaw ? result.result.newRaw : "";
@@ -836,10 +870,11 @@
           rows.push({ label:"Продление", value:esc(`${amount}${humanU(unit)}`) });
           if(prevRow){
             rows.push({ label:"Тариф", value:esc(prevRow.plan) });
-            rows.push({ label:"Старт", value:fmtKz(prevRow.startDate, prevRow.showTime) });
+            rows.push({ label:prevRow.isActive ? "Старт" : "Старт был", value:fmtKz(prevRow.startDate, prevRow.showTime) });
             rows.push({ label:"Окончание было", value:prevRow.type==="lifetime" ? "—" : fmtKz(prevRow.endDate, prevRow.showTime) });
           }
           if(newParsed){
+            if(prevRow && !prevRow.isActive) rows.push({ label:"Старт стал", value:fmtKz(newParsed.startDate, newParsed.showTime) });
             rows.push({ label:"Окончание стало", value:newParsed.type==="lifetime" ? "—" : fmtKz(newParsed.endDate, newParsed.showTime) });
             rows.push({ label:"Осталось", value:esc(newParsed.remaining) });
             rows.push({ label:"Статус", value:`<span class="status ${newParsed.statusClass}">${esc(newParsed.statusLabel)}</span>` });
@@ -850,7 +885,7 @@
             title:"Подписка продлена",
             message: result.message,
             rows,
-            meta: result.sha ? `Commit: <span class="mono">${esc(result.sha)}</span>` : ""
+            meta: ""
           });
           state.extendKey = "";
           render();
@@ -878,16 +913,16 @@
       async function deleteAllExpiredRemote(){
         const expiredRows = state.remoteRows.filter(r=>r.type==='timed'&&!r.isActive);
         const cnt = expiredRows.length;
-        const confirmText = cnt>0 ? `Удалить ${cnt} истекших ключей из GitHub?` : 'Удалить все истекшие ключи из GitHub?';
+        const confirmText = cnt>0 ? `Удалить ${cnt} истекших ключей из базы?` : 'Удалить все истекшие ключи из базы?';
         const ok = await askConfirm({ title:"Удаление истекших ключей", text: confirmText, confirmText:"Удалить" });
         if(!ok) return;
         const result = await mutateRemoteJson(
           (data)=>{ let removed=0; const removedKeys=[]; for(const k of Object.keys(data)){ const p=parseSub(data[k]); if(p.type==='timed'&&!p.isActive){ delete data[k]; removed++; removedKeys.push(k); } } return {removedCount:removed,removedKeys}; },
           (c)=>`chore: remove ${c} expired keys`,
-          'Истекших ключей в GitHub файле не найдено.',
-          (res, sha)=> {
+          'Истекших ключей в базе не найдено.',
+          (res)=> {
             const n = res && res.removedCount ? res.removedCount : 0;
-            return sha ? `Удалено ${n} истекших ключей (commit ${sha}).` : `Удалено ${n} истекших ключей.`;
+            return `Удалено ${n} истекших ключей.`;
           }
         );
         if(result && result.ok && result.result && Array.isArray(result.result.removedKeys) && result.result.removedKeys.length){
@@ -907,7 +942,7 @@
             title:"Истекшие ключи удалены",
             message: result.message,
             rows,
-            meta: result.sha ? `Commit: <span class="mono">${esc(result.sha)}</span>` : ""
+            meta: ""
           });
           return;
         }
@@ -924,7 +959,7 @@
       }
 
       async function deleteSingleRemoteKey(key){
-        const ok = await askConfirm({ title:"Удалить ключ", text:`Удалить ключ "${key}" из GitHub?`, confirmText:"Удалить" });
+        const ok = await askConfirm({ title:"Удалить ключ", text:`Удалить ключ "${key}" из базы?`, confirmText:"Удалить" });
         if(!ok) return;
         const rowSnapshot = state.remoteRows.find((row)=>row.key===key);
         const prevRemoteRows = state.remoteRows.slice();
@@ -940,8 +975,8 @@
         const result = await mutateRemoteJson(
           (data)=>{ if(!Object.prototype.hasOwnProperty.call(data,key)) return {removedCount:0}; delete data[key]; return {removedCount:1}; },
           ()=>`chore: remove key ${key}`,
-          `Ключ ${key} не найден в GitHub файле.`,
-          (_res, sha)=> sha ? `Ключ ${key} удален (commit ${sha}).` : `Ключ ${key} удален.`
+          `Ключ ${key} не найден в базе.`,
+          ()=>`Ключ ${key} удален.`
         );
         if(result && result.ok && result.result && result.result.removedCount > 0){
           writeNotes(state.notesMap);
@@ -960,7 +995,7 @@
             title:"Ключ удален",
             message: result.message,
             rows,
-            meta: result.sha ? `Commit: <span class="mono">${esc(result.sha)}</span>` : ""
+            meta: ""
           });
           return;
         }
@@ -998,13 +1033,16 @@
       refs.tokenInput.addEventListener('input',()=>{ if(refs.rememberToken.checked) localStorage.setItem(TOKEN_STORAGE_KEY, refs.tokenInput.value.trim()); renderMeta(); });
       refs.rememberToken.addEventListener('change',()=>{
         if(refs.rememberToken.checked){ const t=refs.tokenInput.value.trim(); if(t) localStorage.setItem(TOKEN_STORAGE_KEY,t); }
-        else localStorage.removeItem(TOKEN_STORAGE_KEY);
+        else { localStorage.removeItem(TOKEN_STORAGE_KEY); localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY); }
         renderMeta();
       });
 
       refs.deleteExpiredBtn.addEventListener('click',()=>deleteAllExpiredRemote());
       refs.addLocalBtn.addEventListener('click',()=>addRemoteEntry());
-      refs.localTypeInput.addEventListener('change',()=>renderMeta());
+      refs.localTypeInput.addEventListener('change',()=>{
+        if(!isLifetimeMode() && (!refs.localStartDateInput.value || !refs.localStartTimeInput.value)) setLocalStartToDeviceNow();
+        renderMeta();
+      });
       refs.localKeyInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); addRemoteEntry(); }});
       refs.localNoteInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); addRemoteEntry(); }});
 
@@ -1029,9 +1067,12 @@
         }
         if(action==='extend-quick'){
           const k=btn.getAttribute('data-key'); if(!k) return;
+          const panel = btn.closest('.extend-panel');
+          const startDateInput = panel ? panel.querySelector('.extend-start-date') : null;
+          const startTimeInput = panel ? panel.querySelector('.extend-start-time') : null;
           const amount = Number(btn.getAttribute('data-add'));
           const unit = btn.getAttribute('data-unit');
-          extendRemoteKey(decodeURIComponent(k), amount, unit);
+          extendRemoteKey(decodeURIComponent(k), amount, unit, startDateInput ? startDateInput.value : '', startTimeInput ? startTimeInput.value : '');
           return;
         }
         if(action==='extend-apply'){
@@ -1039,22 +1080,23 @@
           const panel = btn.closest('.extend-panel');
           const amountInput = panel ? panel.querySelector('.extend-amount') : null;
           const unitSelect = panel ? panel.querySelector('.extend-unit') : null;
+          const startDateInput = panel ? panel.querySelector('.extend-start-date') : null;
+          const startTimeInput = panel ? panel.querySelector('.extend-start-time') : null;
           const amount = amountInput ? Number(amountInput.value) : NaN;
           const unit = unitSelect ? unitSelect.value : '';
-          extendRemoteKey(decodeURIComponent(k), amount, unit);
+          extendRemoteKey(decodeURIComponent(k), amount, unit, startDateInput ? startDateInput.value : '', startTimeInput ? startTimeInput.value : '');
           return;
         }
       });
 
       (function init(){
-        const savedToken=localStorage.getItem(TOKEN_STORAGE_KEY);
-        if(savedToken){ refs.tokenInput.value=savedToken; refs.rememberToken.checked=true; }
+        const savedToken=localStorage.getItem(TOKEN_STORAGE_KEY) || localStorage.getItem(LEGACY_TOKEN_STORAGE_KEY);
+        if(savedToken){ refs.tokenInput.value=savedToken; refs.rememberToken.checked=true; localStorage.setItem(TOKEN_STORAGE_KEY,savedToken); }
 
         state.notesMap=readNotes();
         state.latestAddedKey = "";
         refs.localTypeInput.value='timed';
-        const now=new Date(); refs.localStartDateInput.value=`${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
-        refs.localStartTimeInput.value='00:00';
+        setLocalStartToDeviceNow();
         rebuild(); render();
 
         loadLogs();
