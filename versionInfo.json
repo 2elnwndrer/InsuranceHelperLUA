@@ -1,5 +1,5 @@
 {
-  "version": "1.4",
+  "version": "1.4.1",
   "changelog": [
     {
       "icon": "REWORK",
@@ -40,6 +40,10 @@
     {
       "icon": "FEEDBACK",
       "text": "Есть идеи или нашли ошибку? Жду ваши сообщения через Telegram-бота: https://t.me/insurance_helperbot"
+    },
+        {
+      "icon": "FEEDBACK",
+      "text": "Небольшой фикс"
     }
   ]
 }
