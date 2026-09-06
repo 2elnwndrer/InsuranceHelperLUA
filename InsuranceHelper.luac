@@ -1,0 +1,233 @@
+--[[
+    Ghetto Graffiti WallHack for Arizona RP (v3 fixed)
+    Command: /ggwh - open menu
+    Command: /ggwh_debug - print current 3D texts to console
+    Author: fokich (adapted from MRender)
+--]]
+
+script_author('fokich')
+script_name('ghetto_graffiti_wh')
+
+local imgui = require('mimgui')
+require('lib.moonloader')
+local encoding = require 'encoding'
+encoding.default = 'CP1251'
+local u8 = encoding.UTF8
+local sampev = require('lib.samp.events')
+
+-- Settings (ImBool)
+local settings = {
+    enabled = imgui.new.bool(true),
+    show_distance = imgui.new.bool(true),
+    show_lines = imgui.new.bool(true),
+    line_width = imgui.new.float(2.0),
+}
+
+-- Gang definitions with precise patterns
+local gangs = {
+    {name = "Grove Street", color = 0xFF00FF00, patterns = {
+        "Банда: {ff6666}{009327}Grove Street",
+        "Grove Street"
+    }},
+    {name = "Ballas", color = 0xFFFF00FF, patterns = {
+        "Банда: {ff6666}{CC00CC}East Side Ballas",
+        "East Side Ballas"
+    }},
+    {name = "Vagos", color = 0xFFFFFF00, patterns = {
+        "Банда: {ff6666}{D1DB1C}Los Santos Vagos",
+        "Los Santos Vagos"
+    }},
+    {name = "Aztecas", color = 0xFF00FFFF, patterns = {
+        "Банда: {ff6666}{00FFE2}Varrios Los Aztecas",
+        "Varrios Los Aztecas"
+    }},
+    {name = "Rifa", color = 0xFFFF8000, patterns = {
+        "Банда: {ff6666}{6666FF}The Rifa",
+        "The Rifa"
+    }},
+    {name = "Night Wolves", color = 0xFF808080, patterns = {
+        "Банда: {ff6666}{A87878}Night Wolves",
+        "Night Wolves"
+    }},
+}
+
+-- Strict filters: text must contain one of these markers
+local GRAFFITI_MARKERS = {
+    "Банда:", "Gang:", "Graffiti"
+}
+
+-- Words that definitely indicate an interior marker
+local IGNORE_PATTERNS = {
+    "Enter", "Вход", "Exit", "Выход", "Interior", "Интерьер"
+}
+
+-- Variables
+local menu_open = false
+local font = renderCreateFont("Arial", 10, 5)
+local font_small = renderCreateFont("Arial", 8, 2)
+
+-- Debug: print all 3D texts (once at startup and via command)
+local function debugPrint3DTexts()
+    print("=== 3D Texts Debug ===")
+    local count = 0
+    for id = 0, 2048 do
+        if sampIs3dTextDefined(id) then
+            local text, color, x, y, z = sampGet3dTextInfoById(id)
+            if text and text ~= "" then
+                print(string.format("ID %d: %s", id, text))
+                count = count + 1
+                if count >= 30 then break end
+            end
+        end
+    end
+    print("=== End (total shown: "..count..") ===")
+end
+
+-- Check if text is an interior marker
+local function isInteriorMarker(text)
+    for _, pat in ipairs(IGNORE_PATTERNS) do
+        if text:find(pat) then return true end
+    end
+    return false
+end
+
+-- Check if text looks like graffiti
+local function isGraffiti(text)
+    -- Must contain at least one strict marker OR match a gang pattern exactly
+    for _, marker in ipairs(GRAFFITI_MARKERS) do
+        if text:find(marker) then return true end
+    end
+    for _, gang in ipairs(gangs) do
+        for _, pattern in ipairs(gang.patterns) do
+            if text:find(pattern, 1, true) then return true end
+        end
+    end
+    return false
+end
+
+-- Extract timer from graffiti text
+local function parseTimer(text)
+    if not text then return nil end
+    -- Pattern: "через 12:34" or "осталось 12:34" or "Wait 12:34"
+    local h, m = text:match("(%d+):(%d+)")
+    if h and m then
+        return string.format("%02d:%02d", h, m)
+    end
+    -- Pattern: "37 минут" or "37 мин" or "37 minutes"
+    local mins = text:match("(%d+)%s*мин")
+    if mins then
+        return mins .. " min"
+    end
+    local mins2 = text:match("(%d+)%s*minutes")
+    if mins2 then
+        return mins2 .. " min"
+    end
+    -- Pattern: "через 37" (just number)
+    local num = text:match("(%d+)%s*$")
+    if num then
+        return num .. " min"
+    end
+    return nil
+end
+
+-- Find graffiti
+local function findGraffiti()
+    local found = {}
+    for id = 0, 2048 do
+        if sampIs3dTextDefined(id) then
+            local text, color, x, y, z = sampGet3dTextInfoById(id)
+            if text and not isInteriorMarker(text) and isGraffiti(text) then
+                for _, gang in ipairs(gangs) do
+                    for _, pattern in ipairs(gang.patterns) do
+                        if text:find(pattern, 1, true) then
+                            table.insert(found, {
+                                id = id,
+                                text = text,
+                                x = x, y = y, z = z,
+                                color = gang.color,
+                                gang_name = gang.name,
+                                timer = parseTimer(text),
+                            })
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return found
+end
+
+-- Render
+local function renderGraffiti()
+    if not settings.enabled[0] then return end
+    local myX, myY, myZ = getCharCoordinates(PLAYER_PED)
+    local graffiti = findGraffiti()
+    local screen_w, screen_h = getScreenResolution()
+
+    for _, g in ipairs(graffiti) do
+        if isPointOnScreen(g.x, g.y, g.z, 1.0) then
+            local sx, sy = convert3DCoordsToScreen(g.x, g.y, g.z)
+            if sx and sy and sx > 0 and sy > 0 and sx < screen_w and sy < screen_h then
+                if settings.show_lines[0] then
+                    local px, py = convert3DCoordsToScreen(myX, myY, myZ)
+                    if px and py then
+                        renderDrawLine(px, py, sx, sy, settings.line_width[0], g.color)
+                    end
+                end
+                renderFontDrawText(font, g.gang_name, sx, sy - 15, g.color)
+                if g.timer then
+                    renderFontDrawText(font_small, g.timer, sx, sy - 5, 0xFFFFFFFF)
+                end
+                if settings.show_distance[0] then
+                    local dist = getDistanceBetweenCoords3d(myX, myY, myZ, g.x, g.y, g.z)
+                    renderFontDrawText(font_small, string.format("%.0fm", dist), sx, sy + 5, 0xFFFFFFFF)
+                end
+            end
+        end
+    end
+end
+
+-- ImGui menu
+imgui.OnFrame(function() return menu_open end, function()
+    if not menu_open then return end
+    imgui.SetNextWindowSize(imgui.ImVec2(280, 200), imgui.Cond.FirstUseEver)
+    imgui.SetNextWindowPos(imgui.ImVec2(100, 100), imgui.Cond.FirstUseEver)
+    if imgui.Begin("Ghetto WH", nil, imgui.WindowFlags.NoResize) then
+        imgui.Checkbox("Enabled", settings.enabled)
+        imgui.Checkbox("Show distance", settings.show_distance)
+        imgui.Checkbox("Draw lines", settings.show_lines)
+        imgui.SliderFloat("Line width", settings.line_width, 0.5, 5.0)
+    end
+    imgui.End()
+end)
+
+-- Main
+function main()
+    while not isSampAvailable() do wait(100) end
+    wait(500)
+
+    sampRegisterChatCommand("ggwh", function()
+        menu_open = not menu_open
+        showCursor(menu_open)
+        if menu_open then
+            sampAddChatMessage("Ghetto WH menu opened", -1)
+        end
+    end)
+
+    sampRegisterChatCommand("ggwh_debug", function()
+        debugPrint3DTexts()
+        sampAddChatMessage("Debug info printed to console (moonloader.log)", -1)
+    end)
+
+    sampAddChatMessage("Ghetto Graffiti WH loaded. /ggwh, /ggwh_debug", -1)
+
+    -- Первичный вывод отладки в консоль (можно закомментировать, если мешает)
+    debugPrint3DTexts()
+
+    while true do
+        wait(0)
+        renderGraffiti()
+        imgui.Process = true
+    end
+end
